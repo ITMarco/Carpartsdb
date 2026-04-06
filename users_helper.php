@@ -34,19 +34,55 @@ function users_ensure_table(mysqli $db): void {
         PRIMARY KEY (`id`),
         UNIQUE KEY `uk_email` (`email`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+    // Add email-confirmation columns if the table pre-dates them
+    $r = $db->query("SHOW COLUMNS FROM `USERS` LIKE 'is_confirmed'");
+    if ($r && $r->num_rows === 0) {
+        // Default 1 so existing admin-created accounts stay accessible
+        $db->query("ALTER TABLE `USERS`
+            ADD COLUMN `is_confirmed`        TINYINT(1)  NOT NULL DEFAULT 1
+                COMMENT '0 = pending email confirmation' AFTER `is_member`,
+            ADD COLUMN `confirmation_token`  VARCHAR(64) NULL DEFAULT NULL
+                COMMENT 'set on self-signup, cleared on confirm' AFTER `is_confirmed`");
+    }
 }
 
 /** Fetch one user row by email. Returns assoc array or null. */
 function users_get_by_email(mysqli $db, string $email): ?array {
     users_ensure_table($db);
     $stmt = $db->prepare(
-        "SELECT `id`,`email`,`realname`,`password`,`isadmin`,`is_member` FROM `USERS` WHERE `email` = ? LIMIT 1"
+        "SELECT `id`,`email`,`realname`,`password`,`isadmin`,`is_member`,`is_confirmed`
+         FROM `USERS` WHERE `email` = ? LIMIT 1"
     );
     $stmt->bind_param('s', $email);
     $stmt->execute();
     $row = $stmt->get_result()->fetch_assoc();
     $stmt->close();
     return $row ?: null;
+}
+
+/** Fetch a pending (unconfirmed) user by their confirmation token. */
+function users_get_by_token(mysqli $db, string $token): ?array {
+    users_ensure_table($db);
+    $stmt = $db->prepare(
+        "SELECT `id`,`email`,`realname` FROM `USERS`
+         WHERE `confirmation_token` = ? AND `is_confirmed` = 0 LIMIT 1"
+    );
+    $stmt->bind_param('s', $token);
+    $stmt->execute();
+    $row = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    return $row ?: null;
+}
+
+/** Mark account confirmed and clear the token. */
+function users_confirm(mysqli $db, int $id): void {
+    $stmt = $db->prepare(
+        "UPDATE `USERS` SET `is_confirmed` = 1, `confirmation_token` = NULL WHERE `id` = ?"
+    );
+    $stmt->bind_param('i', $id);
+    $stmt->execute();
+    $stmt->close();
 }
 
 /** Fetch one user row by id. Returns assoc array or null. */

@@ -37,6 +37,8 @@ include('engine/body_top.engine.php');
 $allowed_pages = [
     // Public
     'home', 'browse', 'viewpart', 'about', 'address', 'privacyverklaring',
+    // Self-signup & email confirmation
+    'signup', 'processsignup', 'confirmemail', 'resendemail',
     // Authenticated users (sellers)
     'addpart', 'processaddpart', 'editpart', 'processeditpart',
     'deletepart', 'uploadpartimage', 'deletepartimage', 'myparts',

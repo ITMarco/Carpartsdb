@@ -13,7 +13,14 @@ if (!isset($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
 
-$login_error = '';
+$login_error   = '';
+$login_success = '';
+
+// Flash message set by confirmemail.php
+if (!empty($_SESSION['signup_confirmed'])) {
+    $login_success = 'Your account is confirmed, ' . $_SESSION['signup_confirmed'] . '! You can now log in.';
+    unset($_SESSION['signup_confirmed']);
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $rate = check_rate_limit();
@@ -38,6 +45,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $myrow = users_get_by_email($CarpartsConnection, $email);
 
             if ($myrow && password_verify($userpassword, $myrow['password'])) {
+                // Check email confirmation
+                if (isset($myrow['is_confirmed']) && (int)$myrow['is_confirmed'] === 0) {
+                    $login_error = 'Your account is not yet confirmed. '
+                                 . 'Please click the link in your confirmation email, or '
+                                 . '<a href="index.php?navigate=resendemail&email=' . rawurlencode($email) . '">resend it</a>.';
+                    if (isset($CarpartsConnection)) mysqli_close($CarpartsConnection);
+                    goto render_form;
+                }
                 reset_login_attempts();
                 session_regenerate_id(true);
 
@@ -70,12 +85,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
+render_form:
 ?>
 <div class="content-box">
     <h3>Login</h3>
     <br>
+<?php if ($login_success): ?>
+    <div style="background:#d4edda;border:1px solid #c3e6cb;color:#155724;padding:10px 14px;
+                border-radius:4px;margin-bottom:14px;font-size:13px;"><?= htmlspecialchars($login_success) ?></div>
+<?php endif; ?>
 <?php if ($login_error): ?>
-    <div style="color:red;margin-bottom:12px;"><?= htmlspecialchars($login_error) ?></div>
+    <div style="background:#f8d7da;border:1px solid #f5c6cb;color:#721c24;padding:10px 14px;
+                border-radius:4px;margin-bottom:14px;font-size:13px;"><?= $login_error ?></div>
 <?php endif; ?>
     <form name="secure" id="secure" action="index.php?navigate=secureadmin" method="post">
         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>" />
@@ -88,4 +109,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                style="width:260px;padding:6px;font-size:14px;" /><br><br>
         <input type="submit" value="Login" class="btn" style="padding:8px 22px;font-size:14px;" />
     </form>
+    <p style="margin-top:16px;font-size:13px;">
+        No account yet? <a href="index.php?navigate=signup">Sign up for free</a><br>
+        <a href="index.php?navigate=resendemail" style="font-size:12px;color:#888;">Didn't receive confirmation email?</a>
+    </p>
 </div>

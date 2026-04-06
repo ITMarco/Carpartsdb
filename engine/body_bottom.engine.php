@@ -45,7 +45,8 @@ if (isset($_SESSION['authenticated']) && $_SESSION['authenticated'] === true) {
         echo ' (logged in as: ' . htmlspecialchars($_SESSION['username']) . ')';
     }
 } else {
-    echo '<a href="index.php?navigate=secureadmin">Admin login</a>';
+    echo '<a href="index.php?navigate=secureadmin">Login</a>';
+    echo ' | <a href="index.php?navigate=signup">Sign up</a>';
 }
 echo ' | <a href="index.php?navigate=privacyverklaring">Privacyverklaring</a>';
 ?>
