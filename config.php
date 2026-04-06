@@ -6,7 +6,7 @@
  */
 
 // Prevent direct access to this file
-if (!defined('SNLDB_ACCESS')) {
+if (!defined('SNLDBCARPARTS_ACCESS')) {
     die('Direct access to this file is not permitted.');
 }
 

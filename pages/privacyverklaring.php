@@ -1,4 +1,4 @@
-<?php if (!defined('SNLDB_ACCESS')) define('SNLDB_ACCESS', 1); ?>
+<?php if (!defined('SNLDBCARPARTS_ACCESS')) define('SNLDBCARPARTS_ACCESS', 1); ?>
 <div class="content-box">
 <h3>Privacyverklaring</h3>
 

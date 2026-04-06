@@ -4,7 +4,7 @@ if (!isset($_SESSION['isadmin']) || $_SESSION['isadmin'] !== 1) {
     return;
 }
 
-if (!defined('SNLDB_ACCESS')) define('SNLDB_ACCESS', true);
+if (!defined('SNLDBCARPARTS_ACCESS')) define('SNLDBCARPARTS_ACCESS', true);
 require_once __DIR__ . '/../ip_whitelist_helper.php';
 require_once __DIR__ . '/../config.php';
 

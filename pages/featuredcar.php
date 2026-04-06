@@ -3,7 +3,7 @@ if (!isset($_SESSION['isadmin']) || $_SESSION['isadmin'] !== 1) {
     echo "<div style='color:red;'>Access denied. <a href='index.php?navigate=secureadmin'>Log in</a></div>";
     return;
 }
-if (!defined('SNLDB_ACCESS')) define('SNLDB_ACCESS', 1);
+if (!defined('SNLDBCARPARTS_ACCESS')) define('SNLDBCARPARTS_ACCESS', 1);
 include_once 'connection.php';
 include_once 'settings_helper.php';
 

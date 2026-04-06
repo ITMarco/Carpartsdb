@@ -1,5 +1,5 @@
 <?php
-if (!defined('SNLDB_ACCESS')) define('SNLDB_ACCESS', 1);
+if (!defined('SNLDBCARPARTS_ACCESS')) define('SNLDBCARPARTS_ACCESS', 1);
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 function es2_opt(string $val, string $label, string $cur): string {

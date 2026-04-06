@@ -46,7 +46,7 @@ if (strlen($myLicense) > 4)
                 }
             }
 
-            if (!defined('SNLDB_ACCESS')) define('SNLDB_ACCESS', true);
+            if (!defined('SNLDBCARPARTS_ACCESS')) define('SNLDBCARPARTS_ACCESS', true);
             include 'image_helper.php';
             $allowed_extensions = array('jpg', 'jpeg', 'gif', 'png', 'webp');
             $allowed_mime_types = array('image/jpeg', 'image/jpg', 'image/gif', 'image/png', 'image/webp');

@@ -3,7 +3,7 @@ $search_term = ($_SERVER['REQUEST_METHOD'] === 'POST') ? trim($_POST['naam'] ?? 
 $rows = [];
 
 if ($search_term !== '' && strlen($search_term) > 1) {
-    if (!defined('SNLDB_ACCESS')) define('SNLDB_ACCESS', 1);
+    if (!defined('SNLDBCARPARTS_ACCESS')) define('SNLDBCARPARTS_ACCESS', 1);
     include_once 'connection.php';
     include_once 'stats_helper.php';
     stats_session_check($SNLDBConnection);

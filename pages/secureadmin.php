@@ -27,7 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!$csrf_valid) {
             $login_error = "Security validation failed. Please refresh and try again.";
         } else {
-            if (!defined('SNLDB_ACCESS')) define('SNLDB_ACCESS', true);
+            if (!defined('SNLDBCARPARTS_ACCESS')) define('SNLDBCARPARTS_ACCESS', true);
             require_once __DIR__ . '/../connection.php';
             include_once __DIR__ . '/../users_helper.php';
             users_ensure_table($SNLDBConnection);

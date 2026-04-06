@@ -1,5 +1,5 @@
 <?php
-if (!defined('SNLDB_ACCESS')) die('Direct access not permitted.');
+if (!defined('SNLDBCARPARTS_ACCESS')) die('Direct access not permitted.');
 
 /**
  * Ensure the USERS table exists. Safe to call multiple times (cached).

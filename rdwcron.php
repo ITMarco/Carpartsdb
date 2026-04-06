@@ -10,7 +10,7 @@
  *   rdwcron.php?action=settoken&newtoken=yourSecret&adminpass=yourAdminPass
  */
 
-define('SNLDB_ACCESS', 1);
+define('SNLDBCARPARTS_ACCESS', 1);
 include_once __DIR__ . '/config.php';
 include_once __DIR__ . '/settings_helper.php';
 include_once __DIR__ . '/pages/rdwu_functions.php';

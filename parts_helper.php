@@ -1,5 +1,5 @@
 <?php
-if (!defined('SNLDB_ACCESS')) die('Direct access not permitted.');
+if (!defined('SNLDBCARPARTS_ACCESS')) die('Direct access not permitted.');
 
 /**
  * Ensure the PARTS table exists. Requires USERS, CAR_MAKES and CAR_MODELS to exist first.

@@ -25,7 +25,7 @@ if (!isset($_SESSION['csrf_token'])) {
 }
 
 // Load database connection
-define('SNLDB_ACCESS', true);
+define('SNLDBCARPARTS_ACCESS', true);
 require_once(__DIR__ . '/connection.php');
 
 // Configuration
