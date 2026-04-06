@@ -1,5 +1,5 @@
 <?php
-if (!defined('SNLDBCARPARTS_ACCESS')) define('SNLDBCARPARTS_ACCESS', 1);
+if (!defined('CARPARTS_ACCESS')) define('CARPARTS_ACCESS', 1);
 
 if (!isset($_SESSION['isadmin']) || $_SESSION['isadmin'] !== 1) {
     echo "<div class='content-box'><p style='color:red;'>Geen toegang. <a href='index.php?navigate=secureadmin'>Log in als admin</a>.</p></div>";

@@ -1,5 +1,5 @@
 <?php
-if (!defined('SNLDBCARPARTS_ACCESS')) die('Direct access not permitted.');
+if (!defined('CARPARTS_ACCESS')) die('Direct access not permitted.');
 
 function comment_ensure_table($db): void {
     static $done = false;

@@ -1,5 +1,5 @@
 <?php
-if (!defined('SNLDBCARPARTS_ACCESS')) define('SNLDBCARPARTS_ACCESS', 1);
+if (!defined('CARPARTS_ACCESS')) define('CARPARTS_ACCESS', 1);
 
 $search_term = ($_SERVER['REQUEST_METHOD'] === 'POST') ? trim($_POST['naam'] ?? '') : '';
 $rows = [];

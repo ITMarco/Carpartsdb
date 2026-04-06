@@ -5,8 +5,8 @@
  */
 
 // Define access constant before loading config
-if (!defined('SNLDBCARPARTS_ACCESS')) {
-    define('SNLDBCARPARTS_ACCESS', true);
+if (!defined('CARPARTS_ACCESS')) {
+    define('CARPARTS_ACCESS', true);
 }
 
 // Load configuration

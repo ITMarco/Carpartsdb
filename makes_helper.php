@@ -1,5 +1,5 @@
 <?php
-if (!defined('SNLDBCARPARTS_ACCESS')) die('Direct access not permitted.');
+if (!defined('CARPARTS_ACCESS')) die('Direct access not permitted.');
 
 /**
  * Returns default data: [ make_name => [[model_name, year_from, year_to], ...] ]

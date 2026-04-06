@@ -1,5 +1,5 @@
 <?php
-if (!defined('SNLDBCARPARTS_ACCESS')) die('Direct access not permitted.');
+if (!defined('CARPARTS_ACCESS')) die('Direct access not permitted.');
 
 /**
  * Ensure the STATS_DAILY table exists. Safe to call multiple times (cached).

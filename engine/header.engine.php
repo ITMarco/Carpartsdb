@@ -18,7 +18,7 @@
       <link href="engine/style.css?v=<?php echo filemtime('engine/style.css'); ?>" rel="stylesheet" type="text/css" />
       <!-- Active theme variables (overrides defaults in style.css) -->
       <?php
-      if (!defined('SNLDBCARPARTS_ACCESS')) define('SNLDBCARPARTS_ACCESS', 1);
+      if (!defined('CARPARTS_ACCESS')) define('CARPARTS_ACCESS', 1);
       include_once 'config.php';
       include_once 'theme_helper.php';
       $_tdb = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);

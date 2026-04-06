@@ -1,0 +1,19 @@
+{
+    "sqltools.connections": [
+        {
+            "mysqlOptions": {
+                "authProtocol": "default",
+                "enableSsl": "Disabled"
+            },
+            "ssh": "Disabled",
+            "previewLimit": 50,
+            "server": "h29.mijn.host",
+            "port": 3306,
+            "driver": "MariaDB",
+            "name": "carpartsdb",
+            "database": "supraclub_carpartsdb01",
+            "username": "supraclub_carpartsdb01",
+            "password": "YmT2K7mGp8BPRC567ubh"
+        }
+    ]
+}

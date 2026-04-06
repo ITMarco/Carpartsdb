@@ -6,19 +6,19 @@
  */
 
 // Prevent direct access to this file
-if (!defined('SNLDBCARPARTS_ACCESS')) {
+if (!defined('CARPARTS_ACCESS')) {
     die('Direct access to this file is not permitted.');
 }
 
 // Database credentials
-define('DB_HOST', 'h29.mijn.host');
+define('DB_HOST', 'localhost');
 define('DB_USER', 'supraclub_carpartsdb01');
 define('DB_PASS', 'YmT2K7mGp8BPRC567ubh');
 define('DB_NAME', 'supraclub_carpartsdb01');
 
 // Session configuration
 define('SESSION_TIMEOUT', 1800); // 30 minutes in seconds
-define('SESSION_NAME', 'SNLDBCARPARTS_SESSION');
+define('SESSION_NAME', 'CARPARTS_SESSION');
 
 // Security settings
 define('HTTPS_REQUIRED', false); // Set to true when HTTPS is available

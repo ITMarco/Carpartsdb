@@ -4,7 +4,7 @@
  * Safe to include mid-request (no session setup, no output).
  * Requires DB_HOST/DB_USER/DB_PASS/DB_NAME/MAX_LOGIN_ATTEMPTS/LOGIN_LOCKOUT_TIME constants.
  */
-if (!defined('SNLDBCARPARTS_ACCESS')) define('SNLDBCARPARTS_ACCESS', true);
+if (!defined('CARPARTS_ACCESS')) define('CARPARTS_ACCESS', true);
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/ip_whitelist_helper.php';
 

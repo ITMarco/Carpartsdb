@@ -4,7 +4,7 @@ if (!isset($_SESSION['isadmin']) || $_SESSION['isadmin'] !== 1) {
     return;
 }
 
-define('SNLDBCARPARTS_ACCESS', 1);
+define('CARPARTS_ACCESS', 1);
 include_once 'connection.php';
 include_once 'theme_helper.php';
 

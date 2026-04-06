@@ -1,5 +1,5 @@
 <?php
-if (!defined('SNLDBCARPARTS_ACCESS')) die('Direct access not permitted.');
+if (!defined('CARPARTS_ACCESS')) die('Direct access not permitted.');
 
 /**
  * Resize and compress an uploaded image to fit within $max_w x $max_h

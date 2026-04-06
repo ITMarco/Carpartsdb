@@ -1,5 +1,5 @@
 <?php
-if (!defined('SNLDBCARPARTS_ACCESS')) define('SNLDBCARPARTS_ACCESS', 1);
+if (!defined('CARPARTS_ACCESS')) define('CARPARTS_ACCESS', 1);
 
 if (!isset($_SESSION['authenticated']) || $_SESSION['authenticated'] !== true) {
     echo "<div class=\"content-box\"><div style='color:#c04040;'>Geen toegang. "
