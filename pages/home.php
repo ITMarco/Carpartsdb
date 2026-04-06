@@ -3,9 +3,18 @@ include 'connection.php';
 include 'stats_helper.php';
 include_once 'settings_helper.php';
 include_once 'parts_helper.php';
+include_once 'users_helper.php';
 
 stats_session_check($CarpartsConnection);
 parts_ensure_table($CarpartsConnection);
+
+// Purge unconfirmed signups older than 7 days — run at most once per day
+$_cleanup_due = settings_get($CarpartsConnection, 'last_signup_cleanup', '2000-01-01 00:00:00');
+if (strtotime($_cleanup_due) < time() - 86400) {
+    users_cleanup_unconfirmed($CarpartsConnection);
+    settings_set($CarpartsConnection, 'last_signup_cleanup', date('Y-m-d H:i:s'));
+}
+unset($_cleanup_due);
 
 // ── Stats ─────────────────────────────────────────────────────────────────────
 $total_parts  = 0;

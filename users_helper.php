@@ -75,6 +75,18 @@ function users_get_by_token(mysqli $db, string $token): ?array {
     return $row ?: null;
 }
 
+/**
+ * Delete unconfirmed accounts that are older than 7 days.
+ * Call at most once per day (caller is responsible for throttling).
+ */
+function users_cleanup_unconfirmed(mysqli $db): void {
+    $db->query(
+        "DELETE FROM `USERS`
+         WHERE `is_confirmed` = 0
+           AND `created_at` < NOW() - INTERVAL 7 DAY"
+    );
+}
+
 /** Mark account confirmed and clear the token. */
 function users_confirm(mysqli $db, int $id): void {
     $stmt = $db->prepare(

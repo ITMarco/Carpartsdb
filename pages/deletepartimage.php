@@ -42,9 +42,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['filename'])) {
         || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
         $delete_msg = '<span style="color:red;">Security validation failed.</span>';
     } else {
-        // Sanitise: only allow files inside parts/{id}/
+        // Sanitise: only allow files inside the part's own photo directory
         $requested = basename($_POST['filename']);
-        $target    = parts_photo_dir($id) . '/' . $requested;
+        $target    = parts_photo_dir_for($part) . '/' . $requested;
         if (file_exists($target) && is_file($target)) {
             @unlink($target);
             // Also remove .webp companion if exists

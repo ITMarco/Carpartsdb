@@ -84,6 +84,12 @@ function parts_ensure_table(mysqli $db): void {
         $db->query("ALTER TABLE `PARTS` ADD COLUMN `for_sale` TINYINT(1) NOT NULL DEFAULT 1 AFTER `visible_private`");
     }
 
+    // photo_dir — stores the YYYYMMDD-{id} folder path; NULL means legacy parts/{id}
+    $result = $db->query("SHOW COLUMNS FROM `PARTS` LIKE 'photo_dir'");
+    if ($result && $result->num_rows === 0) {
+        $db->query("ALTER TABLE `PARTS` ADD COLUMN `photo_dir` VARCHAR(100) NULL DEFAULT NULL AFTER `for_sale`");
+    }
+
     // PART_COMPAT — additional make/model fitments for a part
     $db->query("CREATE TABLE IF NOT EXISTS `PART_COMPAT` (
         `id`       INT NOT NULL AUTO_INCREMENT,
@@ -98,9 +104,42 @@ function parts_ensure_table(mysqli $db): void {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 }
 
-/** Returns the photo directory path for a part (relative to web root). */
-function parts_photo_dir(int $id): string {
+/**
+ * Build the new-style photo directory path: parts/YYYYMMDD-00042
+ * Call this when CREATING a new part's folder.
+ */
+function parts_photo_dir_new(int $id): string {
+    return "parts/" . date('Ymd') . "-" . sprintf('%05d', $id);
+}
+
+/**
+ * Find the actual photo directory for an existing part.
+ * Checks new-style (parts/YYYYMMDD-00042) via glob first,
+ * then falls back to legacy (parts/42).
+ * Safe to call when no directory has been created yet.
+ */
+function parts_find_dir(int $id): string {
+    $matches = array_filter(
+        glob("parts/*-" . sprintf('%05d', $id)) ?: [],
+        'is_dir'
+    );
+    if (!empty($matches)) return (string)reset($matches);
     return "parts/{$id}";
+}
+
+/**
+ * Return the photo directory for a part, using the stored path from the DB row
+ * ($part['photo_dir']) when available, with glob-based discovery as fallback.
+ * Use this anywhere you have the full $part array (uploads, deletes, view).
+ */
+function parts_photo_dir_for(array $part): string {
+    if (!empty($part['photo_dir'])) return (string)$part['photo_dir'];
+    return parts_find_dir((int)$part['id']);
+}
+
+/** @deprecated Use parts_find_dir() or parts_photo_dir_for() instead. */
+function parts_photo_dir(int $id): string {
+    return parts_find_dir($id);
 }
 
 /**
@@ -108,7 +147,7 @@ function parts_photo_dir(int $id): string {
  * Sorted by filename ascending.
  */
 function parts_photos(int $id): array {
-    $dir   = parts_photo_dir($id);
+    $dir   = parts_find_dir($id);
     $files = glob("{$dir}/*.{jpg,jpeg,png,gif,webp}", GLOB_BRACE) ?: [];
     sort($files);
     return $files;
@@ -136,7 +175,8 @@ function parts_ref(int $id): string {
  * Returns the path to the first photo for a part, or null if none.
  */
 function parts_first_photo(int $id): ?string {
-    $files = glob(parts_photo_dir($id) . '/*.{jpg,jpeg,png,gif,webp}', GLOB_BRACE) ?: [];
+    $dir   = parts_find_dir($id);
+    $files = glob("{$dir}/*.{jpg,jpeg,png,gif,webp}", GLOB_BRACE) ?: [];
     sort($files);
     return $files[0] ?? null;
 }
@@ -193,7 +233,11 @@ function parts_get(mysqli $db, int $id, bool $include_hidden = false): ?array {
     parts_ensure_table($db);
     $vis = $include_hidden ? '' : " AND p.`visible` = 1";
     $stmt = $db->prepare(
-        "SELECT p.*, m.`name` AS make_name, mo.`name` AS model_name,
+        "SELECT p.`id`, p.`seller_id`, p.`make_id`, p.`model_id`, p.`title`, p.`description`,
+                p.`year_from`, p.`year_to`, p.`price`, p.`condition`, p.`stock`,
+                p.`oem_number`, p.`replacement_number`, p.`visible`, p.`visible_private`,
+                p.`for_sale`, p.`photo_dir`, p.`created_at`, p.`updated_at`,
+                m.`name` AS make_name, mo.`name` AS model_name,
                 u.`email` AS seller_email, u.`realname` AS seller_name
          FROM `PARTS` p
          JOIN `CAR_MAKES` m  ON m.`id` = p.`make_id`

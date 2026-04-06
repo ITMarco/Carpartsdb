@@ -85,9 +85,15 @@ if ($stmt->execute()) {
     stats_day($CarpartsConnection, 'parts_added');
     $stmt->close();
 
-    // Create photo directory
-    $dir = parts_photo_dir($new_id);
-    if (!is_dir($dir)) @mkdir($dir, 0755, true);
+    // Create photo directory in YYYYMMDD-00042 format
+    $photo_dir = parts_photo_dir_new($new_id);
+    if (!is_dir($photo_dir)) @mkdir($photo_dir, 0755, true);
+
+    // Persist the folder path in PARTS so uploads always find the right dir
+    $pd = $CarpartsConnection->prepare("UPDATE `PARTS` SET `photo_dir` = ? WHERE `id` = ?");
+    $pd->bind_param('si', $photo_dir, $new_id);
+    $pd->execute();
+    $pd->close();
 
     // Save "also fits" compat entries
     $compat_raw = trim($_POST['compat_data'] ?? '[]');

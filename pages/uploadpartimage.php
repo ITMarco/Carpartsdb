@@ -55,7 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['photo'])) {
         if (!in_array($mime, $allowed_mime, true)) {
             $upload_error = 'Only JPG, PNG, GIF and WebP images are allowed.';
         } else {
-            $dir = parts_photo_dir($id);
+            $dir = parts_photo_dir_for($part);
             if (!is_dir($dir) && !@mkdir($dir, 0755, true)) {
                 $upload_error = 'Could not create photo directory.';
             } else {
