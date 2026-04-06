@@ -14,11 +14,18 @@ function theme_ensure_table($db) {
         created_at DATETIME     DEFAULT CURRENT_TIMESTAMP
     )");
 
-    // Add is_public column if it doesn't exist yet (silent if already present)
-    $db->query("ALTER TABLE THEMES ADD COLUMN is_public TINYINT(1) NOT NULL DEFAULT 0");
+    // Add is_public column if it doesn't exist yet
+    $r = $db->query("SHOW COLUMNS FROM THEMES LIKE 'is_public'");
+    if ($r && $r->num_rows === 0) {
+        $db->query("ALTER TABLE THEMES ADD COLUMN is_public TINYINT(1) NOT NULL DEFAULT 0");
+        $db->query("UPDATE THEMES SET is_public = 1 WHERE is_active = 1");
+    }
 
     // Add is_dark column if it doesn't exist yet
-    $db->query("ALTER TABLE THEMES ADD COLUMN is_dark TINYINT(1) NOT NULL DEFAULT 0");
+    $r = $db->query("SHOW COLUMNS FROM THEMES LIKE 'is_dark'");
+    if ($r && $r->num_rows === 0) {
+        $db->query("ALTER TABLE THEMES ADD COLUMN is_dark TINYINT(1) NOT NULL DEFAULT 0");
+    }
 
     $r = $db->query("SELECT COUNT(*) AS cnt FROM THEMES");
     if (!$r || $r->fetch_assoc()['cnt'] > 0) return;

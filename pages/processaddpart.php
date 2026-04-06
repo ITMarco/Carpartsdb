@@ -48,13 +48,23 @@ if ($make_id <= 0) {
     mysqli_close($CarpartsConnection);
     return;
 }
-if ($year_from < 1940 || $year_from > (int)date('Y') + 1) {
-    echo "<div class='content-box'><p style='color:red;'>Valid year (from) is required.</p><p><a href='index.php?navigate=addpart'>Back</a></p></div>";
-    mysqli_close($CarpartsConnection);
-    return;
+
+// Auto-fill year_from from model if not provided
+if ($year_from < 1940 && $model_id) {
+    $yr = $CarpartsConnection->prepare("SELECT `year_from`,`year_to` FROM `CAR_MODELS` WHERE `id`=? LIMIT 1");
+    $yr->bind_param('i', $model_id);
+    $yr->execute();
+    $yr->bind_result($mf, $mt);
+    $yr->fetch();
+    $yr->close();
+    if ($mf) { $year_from = (int)$mf; }
+    if (!$year_to && $mt)  { $year_to  = (int)$mt; }
+}
+if ($year_from < 1940) {
+    $year_from = (int)date('Y'); // fallback: current year
 }
 if ($year_to !== null && $year_to < $year_from) {
-    $year_to = $year_from; // silently fix
+    $year_to = null;
 }
 
 $stmt = $CarpartsConnection->prepare(
@@ -74,13 +84,22 @@ if ($stmt->execute()) {
     $new_id = $CarpartsConnection->insert_id;
     stats_day($CarpartsConnection, 'parts_added');
     $stmt->close();
-    mysqli_close($CarpartsConnection);
 
-    // Create the photo directory
+    // Create photo directory
     $dir = parts_photo_dir($new_id);
     if (!is_dir($dir)) @mkdir($dir, 0755, true);
 
-    header("Location: index.php?navigate=viewpart&id={$new_id}");
+    // Save "also fits" compat entries
+    $compat_raw = trim($_POST['compat_data'] ?? '[]');
+    $compat_arr = json_decode($compat_raw, true);
+    if (is_array($compat_arr) && !empty($compat_arr)) {
+        parts_compat_save($CarpartsConnection, $new_id, $compat_arr);
+    }
+
+    mysqli_close($CarpartsConnection);
+
+    // Redirect to photo-upload step on addpart page
+    header("Location: index.php?navigate=addpart&new={$new_id}");
     exit();
 } else {
     echo "<div class='content-box'><p style='color:red;'>Error saving part: "

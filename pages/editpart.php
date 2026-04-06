@@ -35,17 +35,20 @@ if (!$is_seller && empty($_SESSION['isadmin'])) {
     return;
 }
 
-$makes       = makes_list($CarpartsConnection);
-$models_json = makes_all_models_json($CarpartsConnection);
+$makes        = makes_list($CarpartsConnection);
+$models_json  = makes_all_models_json($CarpartsConnection);
+$compat_rows  = parts_compat_get($CarpartsConnection, $id);
+$compat_json  = json_encode(array_map(fn($r) => ['make_id' => (int)$r['make_id'], 'model_id' => $r['model_id'] ? (int)$r['model_id'] : null], $compat_rows), JSON_UNESCAPED_UNICODE);
 mysqli_close($CarpartsConnection);
 ?>
 <div class="content-box">
 <h3>Edit part: <?= htmlspecialchars(parts_ref($id)) ?></h3>
 <br>
 
-<form method="post" action="index.php?navigate=processeditpart">
+<form method="post" action="index.php?navigate=processeditpart" id="editpart-form">
     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>" />
     <input type="hidden" name="id" value="<?= $id ?>" />
+    <input type="hidden" name="compat_data" id="compat_data" value="<?= htmlspecialchars($compat_json) ?>" />
 
     <label><strong>Title / part name: *</strong></label><br>
     <input type="text" name="title" maxlength="255" required style="width:380px;padding:5px;"
@@ -54,7 +57,7 @@ mysqli_close($CarpartsConnection);
     <div style="display:flex;gap:20px;flex-wrap:wrap;">
         <div>
             <label><strong>Car make: *</strong></label><br>
-            <select name="make_id" id="make_id" required onchange="updateModels()" style="padding:5px;min-width:160px;">
+            <select name="make_id" id="make_id" required onchange="updateModels('make_id','model_id',null,null)" style="padding:5px;min-width:160px;">
                 <option value="">-- Select make --</option>
                 <?php foreach ($makes as $mid => $mname): ?>
                 <option value="<?= $mid ?>" <?= ($part['make_id'] == $mid) ? 'selected' : '' ?>><?= htmlspecialchars($mname) ?></option>
@@ -63,22 +66,23 @@ mysqli_close($CarpartsConnection);
         </div>
         <div>
             <label><strong>Model:</strong></label><br>
-            <select name="model_id" id="model_id" style="padding:5px;min-width:160px;">
+            <select name="model_id" id="model_id" style="padding:5px;min-width:160px;"
+                    onchange="fillYears('model_id','year_from','year_to')">
                 <option value="">-- Select model (optional) --</option>
             </select>
         </div>
     </div>
     <br>
 
-    <div style="display:flex;gap:20px;flex-wrap:wrap;">
+    <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start;">
         <div>
-            <label><strong>Year from: *</strong></label><br>
-            <input type="number" name="year_from" required min="1940" max="<?= date('Y') ?>"
+            <label><strong>Year from:</strong> <small style="color:#888;font-weight:normal;">auto-filled from model</small></label><br>
+            <input type="number" name="year_from" id="year_from" min="1940" max="<?= date('Y') + 1 ?>"
                    style="width:100px;padding:5px;" value="<?= (int)$part['year_from'] ?>" />
         </div>
         <div>
             <label><strong>Year to:</strong></label><br>
-            <input type="number" name="year_to" min="1940" max="<?= date('Y') + 1 ?>"
+            <input type="number" name="year_to" id="year_to" min="1940" max="<?= date('Y') + 1 ?>"
                    style="width:100px;padding:5px;"
                    value="<?= $part['year_to'] ? (int)$part['year_to'] : '' ?>" />
         </div>
@@ -125,6 +129,13 @@ mysqli_close($CarpartsConnection);
     <label><strong>Description:</strong></label><br>
     <textarea name="description" rows="5" style="width:100%;max-width:480px;padding:5px;"><?= htmlspecialchars($part['description'] ?? '') ?></textarea><br><br>
 
+    <!-- Also fits -->
+    <label><strong>Also applicable to:</strong> <small style="color:#666;">other makes/models this part fits</small></label><br>
+    <div id="compat-rows" style="margin:8px 0;"></div>
+    <button type="button" onclick="addCompatRow()"
+            style="padding:5px 14px;font-size:12px;margin-bottom:12px;">+ Add vehicle</button>
+    <br>
+
     <label>
         <input type="checkbox" name="for_sale" value="1" <?= ($part['for_sale']) ? 'checked' : '' ?> />
         <strong>List this part for sale</strong> <small style="color:#666;">(uncheck for display-only items)</small>
@@ -146,21 +157,114 @@ mysqli_close($CarpartsConnection);
 </div>
 
 <script>
-var _models = <?= $models_json ?>;
+var _models    = <?= $models_json ?>;
 var _prevModel = <?= (int)($part['model_id'] ?? 0) ?>;
-function updateModels() {
-    var makeId = parseInt(document.getElementById('make_id').value);
-    var sel = document.getElementById('model_id');
+var _existingCompat = <?= $compat_json ?>;
+
+function updateModels(makeSelId, modelSelId, yfId, ytId) {
+    var makeId = parseInt(document.getElementById(makeSelId).value);
+    var sel = document.getElementById(modelSelId);
     sel.innerHTML = '<option value="">-- Select model (optional) --</option>';
     if (makeId && _models[makeId]) {
         _models[makeId].forEach(function(m) {
             var o = document.createElement('option');
             o.value = m.id;
+            o.dataset.yf = m.yf || '';
+            o.dataset.yt = m.yt || '';
             o.selected = (m.id === _prevModel);
             o.textContent = m.name + (m.yf ? ' (' + m.yf + (m.yt ? '\u2013' + m.yt : '\u2013') + ')' : '');
             sel.appendChild(o);
         });
     }
 }
-updateModels();
+
+function fillYears(modelSelId, yfId, ytId) {
+    var sel = document.getElementById(modelSelId);
+    var opt = sel.options[sel.selectedIndex];
+    if (!opt || !opt.dataset.yf) return;
+    if (yfId) document.getElementById(yfId).value = opt.dataset.yf;
+    if (ytId) document.getElementById(ytId).value = opt.dataset.yt || '';
+}
+
+// ── Compat rows ────────────────────────────────────────────────────────────────
+var _compatIdx = 0;
+
+function addCompatRow(makeVal, modelVal) {
+    var idx = _compatIdx++;
+    var div = document.createElement('div');
+    div.id = 'compat-row-' + idx;
+    div.style.cssText = 'display:flex;gap:10px;align-items:center;margin:4px 0;flex-wrap:wrap;';
+
+    var makeEl = document.createElement('select');
+    makeEl.style.cssText = 'padding:4px;min-width:150px;';
+    makeEl.innerHTML = '<option value="">-- Make --</option>';
+    <?php foreach ($makes as $mid => $mname): ?>
+    (function(){
+        var o = document.createElement('option');
+        o.value = '<?= $mid ?>';
+        o.textContent = <?= json_encode($mname) ?>;
+        makeEl.appendChild(o);
+    })();
+    <?php endforeach; ?>
+    if (makeVal) makeEl.value = makeVal;
+
+    var modelEl = document.createElement('select');
+    modelEl.style.cssText = 'padding:4px;min-width:150px;';
+    modelEl.innerHTML = '<option value="">-- Model (optional) --</option>';
+
+    makeEl.addEventListener('change', function() {
+        modelEl.innerHTML = '<option value="">-- Model (optional) --</option>';
+        var mid = parseInt(makeEl.value);
+        if (mid && _models[mid]) {
+            _models[mid].forEach(function(m) {
+                var o = document.createElement('option');
+                o.value = m.id;
+                o.textContent = m.name + (m.yf ? ' (' + m.yf + (m.yt ? '\u2013' + m.yt : '\u2013') + ')' : '');
+                modelEl.appendChild(o);
+            });
+        }
+        refreshCompatData();
+    });
+    modelEl.addEventListener('change', refreshCompatData);
+
+    if (makeVal && _models[parseInt(makeVal)]) {
+        _models[parseInt(makeVal)].forEach(function(m) {
+            var o = document.createElement('option');
+            o.value = m.id;
+            o.textContent = m.name + (m.yf ? ' (' + m.yf + (m.yt ? '\u2013' + m.yt : '\u2013') + ')' : '');
+            modelEl.appendChild(o);
+        });
+        if (modelVal) modelEl.value = modelVal;
+    }
+
+    var removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.textContent = '✕';
+    removeBtn.style.cssText = 'padding:3px 8px;font-size:12px;';
+    removeBtn.addEventListener('click', function() { div.remove(); refreshCompatData(); });
+
+    div.appendChild(makeEl);
+    div.appendChild(modelEl);
+    div.appendChild(removeBtn);
+    document.getElementById('compat-rows').appendChild(div);
+    makeEl.addEventListener('change', refreshCompatData);
+}
+
+function refreshCompatData() {
+    var rows = document.querySelectorAll('#compat-rows > div');
+    var data = [];
+    rows.forEach(function(row) {
+        var sels = row.querySelectorAll('select');
+        var makeId  = parseInt(sels[0].value) || 0;
+        var modelId = parseInt(sels[1].value) || 0;
+        if (makeId > 0) data.push({make_id: makeId, model_id: modelId || null});
+    });
+    document.getElementById('compat_data').value = JSON.stringify(data);
+}
+
+document.getElementById('editpart-form').addEventListener('submit', refreshCompatData);
+
+// Pre-populate model dropdown and compat rows
+updateModels('make_id', 'model_id', null, null);
+_existingCompat.forEach(function(e) { addCompatRow(e.make_id, e.model_id); });
 </script>

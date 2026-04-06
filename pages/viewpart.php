@@ -26,14 +26,15 @@ if ($part) {
     }
 }
 
-mysqli_close($CarpartsConnection);
-
 if (!$part) {
+    mysqli_close($CarpartsConnection);
     echo "<div class='content-box'><p>Part not found.</p><p><a href='index.php?navigate=browse'>Back to browse</a></p></div>";
     return;
 }
 
-$photos    = parts_photos($id);
+$photos = parts_photos($id);
+$compat = parts_compat_get($CarpartsConnection, $id);
+mysqli_close($CarpartsConnection);
 $is_seller = isset($_SESSION['user_id']) && (int)$_SESSION['user_id'] === (int)$part['seller_id'];
 $can_edit  = $is_seller || !empty($_SESSION['isadmin']);
 ?>
@@ -131,6 +132,17 @@ $can_edit  = $is_seller || !empty($_SESSION['isadmin']);
         <?php if (!empty($part['description'])): ?>
         <h4 style="margin-top:14px;">Description</h4>
         <div style="font-size:13px;line-height:1.6;"><?= nl2br(htmlspecialchars($part['description'])) ?></div>
+        <?php endif; ?>
+
+        <?php if (!empty($compat)): ?>
+        <h4 style="margin-top:14px;">Also fits</h4>
+        <ul style="margin:4px 0 0 0;padding-left:18px;font-size:13px;line-height:1.8;">
+            <?php foreach ($compat as $c): ?>
+            <li><?= htmlspecialchars($c['make_name']) ?>
+                <?= $c['model_name'] ? ' &mdash; ' . htmlspecialchars($c['model_name']) : '' ?>
+            </li>
+            <?php endforeach; ?>
+        </ul>
         <?php endif; ?>
 
         <?php if ($can_edit): ?>

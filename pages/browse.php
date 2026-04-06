@@ -188,7 +188,7 @@ updateModels();
 <?php else: ?>
 <table style="width:100%;border-collapse:collapse;font-size:13px;">
 <tr style="font-weight:bold;border-bottom:2px solid var(--color-content-border);">
-    <td style="padding:5px 8px;">Ref</td>
+    <td style="padding:5px 8px;width:70px;"></td>
     <td style="padding:5px 8px;">Part</td>
     <td style="padding:5px 8px;">Make / Model</td>
     <td style="padding:5px 8px;">Year</td>
@@ -196,16 +196,30 @@ updateModels();
     <td style="padding:5px 8px;">Stock</td>
     <td style="padding:5px 8px;text-align:right;">Price</td>
 </tr>
-<?php foreach ($parts as $p): ?>
+<?php foreach ($parts as $p):
+    $thumb = parts_first_photo((int)$p['id']);
+?>
 <tr style="border-bottom:1px solid var(--color-content-border);">
-    <td style="padding:4px 8px;font-size:11px;white-space:nowrap;">
-        <a href="index.php?navigate=viewpart&id=<?= (int)$p['id'] ?>"><?= sprintf('PART-%05d', $p['id']) ?></a>
-        <?php if ($p['visible_private']): ?><span style="font-size:10px;color:#c04040;"> [private]</span><?php endif; ?>
+    <td style="padding:4px 8px;">
+        <a href="index.php?navigate=viewpart&id=<?= (int)$p['id'] ?>">
+        <?php if ($thumb): ?>
+            <img src="<?= htmlspecialchars($thumb) ?>" alt=""
+                 style="width:64px;height:48px;object-fit:cover;border-radius:3px;
+                        border:1px solid var(--color-content-border);display:block;" />
+        <?php else: ?>
+            <div style="width:64px;height:48px;background:var(--color-surface);
+                        border:1px dashed var(--color-content-border);border-radius:3px;
+                        display:flex;align-items:center;justify-content:center;
+                        font-size:18px;">🔧</div>
+        <?php endif; ?>
+        </a>
     </td>
     <td style="padding:4px 8px;">
         <a href="index.php?navigate=viewpart&id=<?= (int)$p['id'] ?>"><?= htmlspecialchars($p['title']) ?></a>
+        <?php if ($p['visible_private']): ?><span style="font-size:10px;color:#c04040;"> [private]</span><?php endif; ?>
         <?php if (!$p['for_sale']): ?><br><small style="color:#666;">[display only]</small><?php endif; ?>
         <?php if (!empty($p['oem_number'])): ?><br><small style="color:#888;">OEM: <?= htmlspecialchars($p['oem_number']) ?></small><?php endif; ?>
+        <br><small style="color:#aaa;font-size:11px;"><?= sprintf('PART-%05d', $p['id']) ?></small>
     </td>
     <td style="padding:4px 8px;">
         <?= htmlspecialchars($p['make_name']) ?>

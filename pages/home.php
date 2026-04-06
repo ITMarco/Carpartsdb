@@ -156,27 +156,37 @@ if ($nq) while ($nr = $nq->fetch_assoc()) $news_items[] = $nr;
 <h3>Recently listed</h3>
 <table style="width:100%;border-collapse:collapse;font-size:13px;">
 <tr style="font-weight:bold;border-bottom:2px solid var(--color-content-border);">
-    <td style="padding:6px 10px;">Ref</td>
+    <td style="padding:6px 8px;width:70px;"></td>
     <td style="padding:6px 10px;">Part</td>
     <td style="padding:6px 10px;">Make / Model</td>
-    <td style="padding:6px 10px;">Year</td>
     <td style="padding:6px 10px;">Condition</td>
     <td style="padding:6px 10px;text-align:right;">Price</td>
 </tr>
-<?php foreach ($recent_parts as $rp): ?>
+<?php foreach ($recent_parts as $rp):
+    $thumb = parts_first_photo((int)$rp['id']);
+?>
 <tr style="border-bottom:1px solid var(--color-content-border);">
-    <td style="padding:5px 10px;font-size:11px;color:#888;">
-        <a href="index.php?navigate=viewpart&id=<?= (int)$rp['id'] ?>"><?= htmlspecialchars(sprintf('PART-%05d', $rp['id'])) ?></a>
+    <td style="padding:4px 8px;">
+        <a href="index.php?navigate=viewpart&id=<?= (int)$rp['id'] ?>">
+        <?php if ($thumb): ?>
+            <img src="<?= htmlspecialchars($thumb) ?>" alt=""
+                 style="width:64px;height:48px;object-fit:cover;border-radius:3px;
+                        border:1px solid var(--color-content-border);display:block;" />
+        <?php else: ?>
+            <div style="width:64px;height:48px;background:var(--color-surface);
+                        border:1px dashed var(--color-content-border);border-radius:3px;
+                        display:flex;align-items:center;justify-content:center;
+                        font-size:18px;">🔧</div>
+        <?php endif; ?>
+        </a>
     </td>
     <td style="padding:5px 10px;">
         <a href="index.php?navigate=viewpart&id=<?= (int)$rp['id'] ?>"><?= htmlspecialchars($rp['title']) ?></a>
+        <br><small style="color:#888;font-size:11px;"><?= htmlspecialchars(sprintf('PART-%05d', $rp['id'])) ?></small>
     </td>
     <td style="padding:5px 10px;">
         <?= htmlspecialchars($rp['make_name']) ?>
-        <?= $rp['model_name'] ? ' / ' . htmlspecialchars($rp['model_name']) : '' ?>
-    </td>
-    <td style="padding:5px 10px;">
-        <?= htmlspecialchars($rp['year_from']) ?><?= $rp['year_to'] ? '–' . htmlspecialchars($rp['year_to']) : '' ?>
+        <?= $rp['model_name'] ? '<br><small style="color:#888;">' . htmlspecialchars($rp['model_name']) . '</small>' : '' ?>
     </td>
     <td style="padding:5px 10px;"><?= htmlspecialchars(parts_condition_label((int)$rp['condition'])) ?></td>
     <td style="padding:5px 10px;text-align:right;font-weight:bold;">

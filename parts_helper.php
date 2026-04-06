@@ -83,6 +83,19 @@ function parts_ensure_table(mysqli $db): void {
     if ($result && $result->num_rows === 0) {
         $db->query("ALTER TABLE `PARTS` ADD COLUMN `for_sale` TINYINT(1) NOT NULL DEFAULT 1 AFTER `visible_private`");
     }
+
+    // PART_COMPAT — additional make/model fitments for a part
+    $db->query("CREATE TABLE IF NOT EXISTS `PART_COMPAT` (
+        `id`       INT NOT NULL AUTO_INCREMENT,
+        `part_id`  INT NOT NULL,
+        `make_id`  INT NOT NULL,
+        `model_id` INT DEFAULT NULL,
+        PRIMARY KEY (`id`),
+        KEY `idx_part` (`part_id`),
+        CONSTRAINT `fk_compat_part`  FOREIGN KEY (`part_id`)  REFERENCES `PARTS`      (`id`) ON DELETE CASCADE,
+        CONSTRAINT `fk_compat_make`  FOREIGN KEY (`make_id`)  REFERENCES `CAR_MAKES`  (`id`),
+        CONSTRAINT `fk_compat_model` FOREIGN KEY (`model_id`) REFERENCES `CAR_MODELS` (`id`) ON DELETE SET NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 }
 
 /** Returns the photo directory path for a part (relative to web root). */
@@ -117,6 +130,59 @@ function parts_condition_label(int $cond): string {
 /** Display part ID as a human-readable reference number, e.g. PART-00042. */
 function parts_ref(int $id): string {
     return sprintf('PART-%05d', $id);
+}
+
+/**
+ * Returns the path to the first photo for a part, or null if none.
+ */
+function parts_first_photo(int $id): ?string {
+    $files = glob(parts_photo_dir($id) . '/*.{jpg,jpeg,png,gif,webp}', GLOB_BRACE) ?: [];
+    sort($files);
+    return $files[0] ?? null;
+}
+
+/**
+ * Returns all "also fits" compat entries for a part.
+ * Each entry: [make_id, model_id, make_name, model_name]
+ */
+function parts_compat_get(mysqli $db, int $part_id): array {
+    $stmt = $db->prepare(
+        "SELECT pc.`make_id`, pc.`model_id`, m.`name` AS make_name, mo.`name` AS model_name
+         FROM `PART_COMPAT` pc
+         JOIN `CAR_MAKES` m ON m.`id` = pc.`make_id`
+         LEFT JOIN `CAR_MODELS` mo ON mo.`id` = pc.`model_id`
+         WHERE pc.`part_id` = ?
+         ORDER BY m.`name`, mo.`name`"
+    );
+    if (!$stmt) return [];
+    $stmt->bind_param('i', $part_id);
+    $stmt->execute();
+    $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    $stmt->close();
+    return $rows;
+}
+
+/**
+ * Replace all compat entries for a part.
+ * $entries = array of ['make_id' => int, 'model_id' => int|null]
+ */
+function parts_compat_save(mysqli $db, int $part_id, array $entries): void {
+    $del = $db->prepare("DELETE FROM `PART_COMPAT` WHERE `part_id` = ?");
+    $del->bind_param('i', $part_id);
+    $del->execute();
+    $del->close();
+
+    if (empty($entries)) return;
+
+    $ins = $db->prepare("INSERT INTO `PART_COMPAT` (`part_id`,`make_id`,`model_id`) VALUES (?,?,?)");
+    foreach ($entries as $e) {
+        $make_id  = (int)($e['make_id'] ?? 0);
+        $model_id = isset($e['model_id']) && $e['model_id'] ? (int)$e['model_id'] : null;
+        if ($make_id <= 0) continue;
+        $ins->bind_param('iii', $part_id, $make_id, $model_id);
+        $ins->execute();
+    }
+    $ins->close();
 }
 
 /**

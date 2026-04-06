@@ -14,8 +14,15 @@
         </ul>
     </nav>
     <div id="header_text"><font color="black">
-<?
+<?php
 echo 'Online users: ' . getOnlineUsers();
+if (isset($_SESSION['authenticated']) && $_SESSION['authenticated'] === true) {
+    $uname = htmlspecialchars($_SESSION['username'] ?? $_SESSION['user_email'] ?? '');
+    echo ' &mdash; <strong>' . $uname . '</strong>';
+    if (!empty($_SESSION['isadmin'])) {
+        echo ' &nbsp;<a href="index.php?navigate=adminpanel" style="color:#000;font-size:12px;">[Admin]</a>';
+    }
+}
 ?></font></div>
 </div>
 

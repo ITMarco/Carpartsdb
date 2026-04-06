@@ -35,8 +35,10 @@ if (!$is_seller && empty($_SESSION['isadmin'])) {
     return;
 }
 
+$is_ajax     = !empty($_GET['ajax']);
 $upload_error = '';
 $upload_ok    = false;
+$saved_path   = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['photo'])) {
     if (!isset($_POST['csrf_token'], $_SESSION['csrf_token'])
@@ -46,9 +48,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['photo'])) {
         $upload_error = 'Upload error code: ' . (int)$_FILES['photo']['error'];
     } else {
         // Validate mime type
-        $finfo = finfo_open(FILEINFO_MIME_TYPE);
-        $mime  = finfo_file($finfo, $_FILES['photo']['tmp_name']);
-        finfo_close($finfo);
+        $finfo = new finfo(FILEINFO_MIME_TYPE);
+        $mime  = $finfo->file($_FILES['photo']['tmp_name']);
         $allowed_mime = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 
         if (!in_array($mime, $allowed_mime, true)) {
@@ -58,25 +59,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['photo'])) {
             if (!is_dir($dir) && !@mkdir($dir, 0755, true)) {
                 $upload_error = 'Could not create photo directory.';
             } else {
-                // Generate unique filename
-                $ext    = match($mime) {
+                $ext   = match($mime) {
                     'image/png'  => 'png',
                     'image/gif'  => 'gif',
                     'image/webp' => 'webp',
                     default      => 'jpg',
                 };
-                $fname  = $dir . '/' . uniqid('img_', true) . '.' . $ext;
+                $fname = $dir . '/' . uniqid('img_', true) . '.' . $ext;
                 include_once 'image_helper.php';
                 $result = snldb_save_image($_FILES['photo']['tmp_name'], $fname);
 
                 if ($result) {
                     stats_day($CarpartsConnection, 'images_added');
-                    $upload_ok = true;
+                    $upload_ok  = true;
+                    $saved_path = $fname;
                 } else {
                     $upload_error = 'Image processing failed. Check file size (max 1.5 MB) and format.';
                 }
             }
         }
+    }
+    // AJAX response
+    if ($is_ajax) {
+        mysqli_close($CarpartsConnection);
+        header('Content-Type: application/json');
+        if ($upload_ok) {
+            echo json_encode(['ok' => true, 'path' => $saved_path]);
+        } else {
+            echo json_encode(['ok' => false, 'error' => $upload_error]);
+        }
+        exit();
     }
 }
 
