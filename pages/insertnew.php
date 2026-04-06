@@ -37,10 +37,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST')
 	$History = isset($_POST['history']) ? htmlspecialchars($_POST['history'], ENT_QUOTES) : '';
 
 	// SECURITY: Use prepared statement to prevent SQL injection
-	$stmt = $SNLDBConnection->prepare("INSERT INTO SNLDB (License, Owner_display, Choise_Model, Choise_Engine, Choise_Transmission, Build_date, Registration_date, Milage, Choise_Status, VIN_Number, VIN_Modelcode, VIN_Colorcode, MA, Mods, History, RECNO, moddate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?)");
+	$stmt = $CarpartsConnection->prepare("INSERT INTO SNLDB (License, Owner_display, Choise_Model, Choise_Engine, Choise_Transmission, Build_date, Registration_date, Milage, Choise_Status, VIN_Number, VIN_Modelcode, VIN_Colorcode, MA, Mods, History, RECNO, moddate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?)");
 
 	if (!$stmt) {
-		error_log("Prepare failed: " . $SNLDBConnection->error);
+		error_log("Prepare failed: " . $CarpartsConnection->error);
 		die("Database error occurred.");
 	}
 
@@ -50,9 +50,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST')
 		$stmt->close();
 		include 'stats_helper.php';
 		include_once 'car_stats_helper.php';
-		stats_day($SNLDBConnection, 'supras_added');
-		car_changelog_log($SNLDBConnection, $License, 'new');
-		mysqli_close($SNLDBConnection);
+		stats_day($CarpartsConnection, 'supras_added');
+		car_changelog_log($CarpartsConnection, $License, 'new');
+		mysqli_close($CarpartsConnection);
 
 		// Create folder structure
 		$myLicense = $License;
@@ -86,7 +86,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST')
 		}
 	} else {
 		$stmt->close();
-		mysqli_close($SNLDBConnection);
+		mysqli_close($CarpartsConnection);
 		die("Error inserting record into database.");
 	}
 

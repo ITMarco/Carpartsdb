@@ -51,7 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST')
 		$date = date("Y-m-d H:i:s");
 
 		// Auto-preserve old owner name in history if it changed
-		$cur = $SNLDBConnection->prepare("SELECT Owner_display, Owner_history FROM SNLDB WHERE RECNO = ?");
+		$cur = $CarpartsConnection->prepare("SELECT Owner_display, Owner_history FROM SNLDB WHERE RECNO = ?");
 		if ($cur) {
 		    $cur->bind_param('i', $recordnr);
 		    $cur->execute();
@@ -66,10 +66,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST')
 		}
 
 		// SECURITY: Use prepared statement to prevent SQL injection
-		$stmt = $SNLDBConnection->prepare("UPDATE SNLDB SET License = ?, Owner_display = ?, Owner_show = ?, Owner_history = ?, Choise_Model = ?, Choise_Engine = ?, Choise_Transmission = ?, Build_date = ?, Registration_date = ?, Milage = ?, Choise_Status = ?, VIN_Colorcode = ?, MA = ?, Mods = ?, History = ?, moddate = ? WHERE RECNO = ?");
+		$stmt = $CarpartsConnection->prepare("UPDATE SNLDB SET License = ?, Owner_display = ?, Owner_show = ?, Owner_history = ?, Choise_Model = ?, Choise_Engine = ?, Choise_Transmission = ?, Build_date = ?, Registration_date = ?, Milage = ?, Choise_Status = ?, VIN_Colorcode = ?, MA = ?, Mods = ?, History = ?, moddate = ? WHERE RECNO = ?");
 
 		if (!$stmt) {
-			error_log("Prepare failed: " . $SNLDBConnection->error);
+			error_log("Prepare failed: " . $CarpartsConnection->error);
 			die("Database error occurred.");
 		}
 
@@ -78,8 +78,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST')
 $stmt->bind_param("ssisssssssssssssi", $License, $Owner_display, $Owner_show, $Owner_history, $Choise_Model, $Choise_Engine, $Choise_Transmission, $Build_date, $Registration_date, $Milage, $Choise_Status, $color, $ma, $mods, $History, $date, $recordnr);
 
 		if ($stmt->execute()) {
-			car_stats_log($SNLDBConnection, $License, 'edit');
-			car_changelog_log($SNLDBConnection, $License, 'info');
+			car_stats_log($CarpartsConnection, $License, 'edit');
+			car_changelog_log($CarpartsConnection, $License, 'info');
 			echo "Wijzigingen opgeslagen...";
 		} else {
 			error_log("Execute failed: " . $stmt->error);
@@ -95,7 +95,7 @@ $stmt->bind_param("ssisssssssssssssi", $License, $Owner_display, $Owner_show, $O
 </form>
 
 	<?php
-		mysqli_close($SNLDBConnection);
+		mysqli_close($CarpartsConnection);
 	}
 ?>
 </div>

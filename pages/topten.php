@@ -4,30 +4,30 @@ include 'photo_recent_helper.php';
 include_once 'car_stats_helper.php';
 
 // Ensure the ring-buffer table exists (no-op if already created)
-photo_recent_init($SNLDBConnection);
+photo_recent_init($CarpartsConnection);
 
 // Recent photos (newest first, skip empty slots)
-$photos_q = $SNLDBConnection->query(
+$photos_q = $CarpartsConnection->query(
     "SELECT license, filename, uploaded_at FROM PHOTO_RECENT
      WHERE filename IS NOT NULL AND license IS NOT NULL
      ORDER BY uploaded_at DESC"
 );
 
 // Recently modified
-$modified_q = $SNLDBConnection->query(
+$modified_q = $CarpartsConnection->query(
     "SELECT License, Owner_display, Choise_Model, Choise_Status, moddate
      FROM SNLDB WHERE moddate != '0000-00-00 00:00:00'
      ORDER BY moddate DESC LIMIT 10"
 );
 
 // Recently added
-$added_q = $SNLDBConnection->query(
+$added_q = $CarpartsConnection->query(
     "SELECT License, Owner_display, Choise_Model, Choise_Status
      FROM SNLDB ORDER BY RECNO DESC LIMIT 10"
 );
 
 // Top 10 most viewed (excluding bots — filters common bot user-agents)
-$top_viewed_q = $SNLDBConnection->query(
+$top_viewed_q = $CarpartsConnection->query(
     "SELECT license, COUNT(*) AS cnt FROM CAR_VIEWS
      WHERE event_type='view'
        AND user_agent NOT LIKE '%bot%'
@@ -36,7 +36,7 @@ $top_viewed_q = $SNLDBConnection->query(
      GROUP BY license ORDER BY cnt DESC LIMIT 10"
 );
 
-mysqli_close($SNLDBConnection);
+mysqli_close($CarpartsConnection);
 
 // Status badge helper
 function status_badge($status) {

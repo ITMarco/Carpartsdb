@@ -139,7 +139,7 @@ function cs_chk($val, $cur) { return $val === $cur ? ' checked'  : ''; }
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 	include 'connection.php';
 	include 'stats_helper.php';
-	stats_session_check($SNLDBConnection);
+	stats_session_check($CarpartsConnection);
 
 	$conditions = array();
 	$params = array();
@@ -155,7 +155,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
 	if (count($conditions) > 0) {
 		$query = "SELECT * FROM SNLDB WHERE " . implode(" AND ", $conditions);
-		$stmt = $SNLDBConnection->prepare($query);
+		$stmt = $CarpartsConnection->prepare($query);
 		if ($stmt) {
 			$bind_params = array_merge(array($types), $params);
 			$refs = array();
@@ -164,12 +164,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 			$stmt->execute();
 			$result = $stmt->get_result();
 		} else {
-			error_log("customsearch prepare failed: " . $SNLDBConnection->error);
+			error_log("customsearch prepare failed: " . $CarpartsConnection->error);
 		}
 	} else {
 		$is_admin = !empty($_SESSION['isadmin']) && $_SESSION['isadmin'] === 1;
 		if ($is_admin) {
-			$stmt = $SNLDBConnection->prepare(
+			$stmt = $CarpartsConnection->prepare(
 				"SELECT *, MATCH(License, Owner_display, VIN_Colorcode, Mods, History)
 				          AGAINST (? IN BOOLEAN MODE) AS relevance
 				 FROM SNLDB
@@ -180,7 +180,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 			if ($stmt) { $stmt->bind_param('ss', $mytrefwoord, $mytrefwoord); }
 		} else {
 			$p    = '%' . $mytrefwoord . '%';
-			$stmt = $SNLDBConnection->prepare(
+			$stmt = $CarpartsConnection->prepare(
 				"SELECT *, 0 AS relevance FROM SNLDB
 				 WHERE License LIKE ? OR Choise_Model LIKE ? OR Choise_Engine LIKE ?
 				    OR VIN_Colorcode LIKE ? OR Mods LIKE ?
@@ -192,7 +192,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 			$stmt->execute();
 			$result = $stmt->get_result();
 		} else {
-			error_log("customsearch fulltext prepare failed: " . $SNLDBConnection->error);
+			error_log("customsearch fulltext prepare failed: " . $CarpartsConnection->error);
 		}
 	}
 
@@ -200,8 +200,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 		$num = $result->num_rows;
 	}
 
-	$SNLDBConnection->query("UPDATE `16915snldb`.`HITS` SET `searches` = searches + 1 WHERE CONVERT(`HITS`.`key` USING utf8) = '1'");
-	stats_day($SNLDBConnection, 'searches');
+	$CarpartsConnection->query("UPDATE `16915snldb`.`HITS` SET `searches` = searches + 1 WHERE CONVERT(`HITS`.`key` USING utf8) = '1'");
+	stats_day($CarpartsConnection, 'searches');
 
 	if ($num == 0) {
 		echo "<div class='content-box'>";
@@ -303,7 +303,7 @@ function snlRDWCheck(k) {
 			$Choise_Engine       = $row['Choise_Engine'];
 			$Choise_Transmission = $row['Choise_Transmission'];
 
-			$SNLDBConnection->query("UPDATE `16915snldb`.`HITS` SET `searchhits` = searchhits + 1 WHERE CONVERT(`HITS`.`key` USING utf8) = '1'");
+			$CarpartsConnection->query("UPDATE `16915snldb`.`HITS` SET `searchhits` = searchhits + 1 WHERE CONVERT(`HITS`.`key` USING utf8) = '1'");
 
 			$sl           = htmlspecialchars(strtoupper(preg_replace('/\s*/m', '', $License)), ENT_QUOTES);
 			$stripLicense = strtoupper(preg_replace('/\s*/m', '', $License));
@@ -392,7 +392,7 @@ function snlRDWCheck(k) {
 		} // end while
 
 		if ($stmt) $stmt->close();
-		mysqli_close($SNLDBConnection);
+		mysqli_close($CarpartsConnection);
 	}
 }
 ?>

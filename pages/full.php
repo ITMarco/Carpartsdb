@@ -4,16 +4,16 @@
 	$per_page = 50;
 	$page     = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
 
-	$count_result = $SNLDBConnection->query("SELECT COUNT(*) FROM SNLDB");
+	$count_result = $CarpartsConnection->query("SELECT COUNT(*) FROM SNLDB");
 	$total        = $count_result ? (int)$count_result->fetch_row()[0] : 0;
 	$total_pages  = max(1, (int)ceil($total / $per_page));
 	$page         = min($page, $total_pages);
 	$offset       = ($page - 1) * $per_page;
 
-	$result = $SNLDBConnection->query("SELECT License, Owner_display, Choise_Model FROM SNLDB ORDER BY Choise_Model LIMIT $per_page OFFSET $offset");
+	$result = $CarpartsConnection->query("SELECT License, Owner_display, Choise_Model FROM SNLDB ORDER BY Choise_Model LIMIT $per_page OFFSET $offset");
 
 	if (!$result) {
-		error_log("full.php query failed: " . $SNLDBConnection->error);
+		error_log("full.php query failed: " . $CarpartsConnection->error);
 		echo "<div class='content-box'><h3>Fout</h3><p>Kon de database niet ophalen.</p></div>";
 	} else {
 		$prev = $page > 1            ? $page - 1 : null;
@@ -47,5 +47,5 @@
 
 		echo $nav;
 	}
-	mysqli_close($SNLDBConnection);
+	mysqli_close($CarpartsConnection);
 ?>

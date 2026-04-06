@@ -7,10 +7,10 @@ $rows = [];
 if ($search_term !== '' && strlen($search_term) > 1) {
     include_once 'connection.php';
     include_once 'stats_helper.php';
-    stats_session_check($SNLDBConnection);
+    stats_session_check($CarpartsConnection);
 
     $fl   = '%' . $search_term . '%';
-    $stmt = $SNLDBConnection->prepare("SELECT * FROM SNLDB WHERE License LIKE ? ORDER BY License");
+    $stmt = $CarpartsConnection->prepare("SELECT * FROM SNLDB WHERE License LIKE ? ORDER BY License");
     if ($stmt) {
         $stmt->bind_param('s', $fl);
         $stmt->execute();
@@ -19,8 +19,8 @@ if ($search_term !== '' && strlen($search_term) > 1) {
         $stmt->close();
     }
 
-    $SNLDBConnection->query("UPDATE `16915snldb`.`HITS` SET `searches` = searches + 1 WHERE CONVERT(`HITS`.`key` USING utf8) = '1'");
-    stats_day($SNLDBConnection, 'searches');
+    $CarpartsConnection->query("UPDATE `16915snldb`.`HITS` SET `searches` = searches + 1 WHERE CONVERT(`HITS`.`key` USING utf8) = '1'");
+    stats_day($CarpartsConnection, 'searches');
 }
 ?>
 <div class="content-box">

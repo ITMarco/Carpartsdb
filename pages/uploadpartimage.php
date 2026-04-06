@@ -12,26 +12,26 @@ include 'connection.php';
 include_once 'parts_helper.php';
 include_once 'stats_helper.php';
 
-parts_ensure_table($SNLDBConnection);
+parts_ensure_table($CarpartsConnection);
 
 $id = isset($_GET['id']) ? intval($_GET['id']) : (isset($_POST['id']) ? intval($_POST['id']) : 0);
 if ($id <= 0) {
     echo "<div class='content-box'><p>Invalid part ID.</p></div>";
-    mysqli_close($SNLDBConnection);
+    mysqli_close($CarpartsConnection);
     return;
 }
 
-$part = parts_get($SNLDBConnection, $id, true);
+$part = parts_get($CarpartsConnection, $id, true);
 if (!$part) {
     echo "<div class='content-box'><p>Part not found.</p></div>";
-    mysqli_close($SNLDBConnection);
+    mysqli_close($CarpartsConnection);
     return;
 }
 
 $is_seller = isset($_SESSION['user_id']) && (int)$_SESSION['user_id'] === (int)$part['seller_id'];
 if (!$is_seller && empty($_SESSION['isadmin'])) {
     echo "<div class='content-box'><p style='color:red;'>Access denied.</p></div>";
-    mysqli_close($SNLDBConnection);
+    mysqli_close($CarpartsConnection);
     return;
 }
 
@@ -70,7 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['photo'])) {
                 $result = snldb_save_image($_FILES['photo']['tmp_name'], $fname);
 
                 if ($result) {
-                    stats_day($SNLDBConnection, 'images_added');
+                    stats_day($CarpartsConnection, 'images_added');
                     $upload_ok = true;
                 } else {
                     $upload_error = 'Image processing failed. Check file size (max 1.5 MB) and format.';
@@ -81,7 +81,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['photo'])) {
 }
 
 $photos = parts_photos($id);
-mysqli_close($SNLDBConnection);
+mysqli_close($CarpartsConnection);
 ?>
 <div class="content-box">
 <h3>Upload photo &mdash; <?= htmlspecialchars(parts_ref($id)) ?></h3>

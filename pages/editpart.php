@@ -18,26 +18,26 @@ include 'connection.php';
 include_once 'parts_helper.php';
 include_once 'makes_helper.php';
 
-parts_ensure_table($SNLDBConnection);
+parts_ensure_table($CarpartsConnection);
 
-$part = parts_get($SNLDBConnection, $id, true);
+$part = parts_get($CarpartsConnection, $id, true);
 
 if (!$part) {
-    mysqli_close($SNLDBConnection);
+    mysqli_close($CarpartsConnection);
     echo "<div class='content-box'><p>Part not found.</p></div>";
     return;
 }
 
 $is_seller = isset($_SESSION['user_id']) && (int)$_SESSION['user_id'] === (int)$part['seller_id'];
 if (!$is_seller && empty($_SESSION['isadmin'])) {
-    mysqli_close($SNLDBConnection);
+    mysqli_close($CarpartsConnection);
     echo "<div class='content-box'><p style='color:red;'>Access denied. You can only edit your own listings.</p></div>";
     return;
 }
 
-$makes       = makes_list($SNLDBConnection);
-$models_json = makes_all_models_json($SNLDBConnection);
-mysqli_close($SNLDBConnection);
+$makes       = makes_list($CarpartsConnection);
+$models_json = makes_all_models_json($CarpartsConnection);
+mysqli_close($CarpartsConnection);
 ?>
 <div class="content-box">
 <h3>Edit part: <?= htmlspecialchars(parts_ref($id)) ?></h3>

@@ -16,10 +16,10 @@ if (isset($_SESSION['authenticated']) && $_SESSION['authenticated'] === true) {
     if (!empty($_SESSION['isadmin']) && $_SESSION['isadmin'] === 1) {
         include_once 'settings_helper.php';
         include_once 'comment_helper.php';
-        if (!isset($SNLDBConnection)) include_once 'connection.php';
-        comment_ensure_table($SNLDBConnection);
-        $last_seen = settings_get($SNLDBConnection, 'comments_last_seen', '2000-01-01 00:00:00');
-        $badge_stmt = $SNLDBConnection->prepare(
+        if (!isset($CarpartsConnection)) include_once 'connection.php';
+        comment_ensure_table($CarpartsConnection);
+        $last_seen = settings_get($CarpartsConnection, 'comments_last_seen', '2000-01-01 00:00:00');
+        $badge_stmt = $CarpartsConnection->prepare(
             "SELECT COUNT(*) FROM CAR_COMMENTS WHERE created_at > ?"
         );
         $new_count = 0;

@@ -20,7 +20,7 @@ if (!isset($_POST['csrf_token'], $_SESSION['csrf_token'])
 
 include 'connection.php';
 include_once 'users_helper.php';
-users_ensure_table($SNLDBConnection);
+users_ensure_table($CarpartsConnection);
 
 $userid = isset($_POST['userid']) ? intval($_POST['userid']) : 0;
 $action = $_POST['action'] ?? '';
@@ -28,12 +28,12 @@ $action = $_POST['action'] ?? '';
 if ($userid <= 0) {
     echo "<div style='color:red;'>Invalid user ID.</div>";
     echo "<p><a href='index.php?navigate=edituser'>Back</a></p></div>";
-    mysqli_close($SNLDBConnection);
+    mysqli_close($CarpartsConnection);
     return;
 }
 
 if ($action === 'Delete') {
-    $stmt = $SNLDBConnection->prepare("DELETE FROM `USERS` WHERE `id` = ?");
+    $stmt = $CarpartsConnection->prepare("DELETE FROM `USERS` WHERE `id` = ?");
     $stmt->bind_param('i', $userid);
     if ($stmt->execute()) {
         echo "<div style='background:#d4edda;border:1px solid #28a745;padding:12px;border-radius:4px;'>";
@@ -53,19 +53,19 @@ if ($action === 'Delete') {
     if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
         echo "<div style='color:red;'>Valid email address is required.</div>";
         echo "<p><a href='index.php?navigate=edituser'>Back</a></p></div>";
-        mysqli_close($SNLDBConnection);
+        mysqli_close($CarpartsConnection);
         return;
     }
 
     // Duplicate email check (excluding current user)
-    $chk = $SNLDBConnection->prepare("SELECT `id` FROM `USERS` WHERE `email` = ? AND `id` != ? LIMIT 1");
+    $chk = $CarpartsConnection->prepare("SELECT `id` FROM `USERS` WHERE `email` = ? AND `id` != ? LIMIT 1");
     $chk->bind_param('si', $email, $userid);
     $chk->execute();
     if ($chk->get_result()->num_rows > 0) {
         echo "<div style='color:red;'>This email address is already in use by another user.</div>";
         echo "<p><a href='index.php?navigate=edituser'>Back</a></p></div>";
         $chk->close();
-        mysqli_close($SNLDBConnection);
+        mysqli_close($CarpartsConnection);
         return;
     }
     $chk->close();
@@ -74,16 +74,16 @@ if ($action === 'Delete') {
         if (strlen($password) < 6) {
             echo "<div style='color:red;'>Password must be at least 6 characters.</div>";
             echo "<p><a href='index.php?navigate=edituser'>Back</a></p></div>";
-            mysqli_close($SNLDBConnection);
+            mysqli_close($CarpartsConnection);
             return;
         }
         $hashed = password_hash($password, PASSWORD_BCRYPT);
-        $stmt   = $SNLDBConnection->prepare(
+        $stmt   = $CarpartsConnection->prepare(
             "UPDATE `USERS` SET `email`=?,`realname`=?,`password`=?,`isadmin`=?,`is_member`=? WHERE `id`=?"
         );
         $stmt->bind_param('sssiii', $email, $realname, $hashed, $isadmin, $is_member, $userid);
     } else {
-        $stmt = $SNLDBConnection->prepare(
+        $stmt = $CarpartsConnection->prepare(
             "UPDATE `USERS` SET `email`=?,`realname`=?,`isadmin`=?,`is_member`=? WHERE `id`=?"
         );
         $stmt->bind_param('ssiii', $email, $realname, $isadmin, $is_member, $userid);
@@ -104,7 +104,7 @@ if ($action === 'Delete') {
     echo "<div style='color:red;'>Unknown action.</div>";
 }
 
-mysqli_close($SNLDBConnection);
+mysqli_close($CarpartsConnection);
 ?>
 <p>
     <a href="index.php?navigate=edituser">Edit another user</a> |

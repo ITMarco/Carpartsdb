@@ -10,12 +10,12 @@
 
 	include 'connection.php';
 	include 'stats_helper.php';
-	stats_session_check($SNLDBConnection);
+	stats_session_check($CarpartsConnection);
 
-	$stmt = $SNLDBConnection->prepare("SELECT * FROM SNLDB WHERE License LIKE ?");
+	$stmt = $CarpartsConnection->prepare("SELECT * FROM SNLDB WHERE License LIKE ?");
 
 	if (!$stmt) {
-		error_log("includesearch prepare failed: " . $SNLDBConnection->error);
+		error_log("includesearch prepare failed: " . $CarpartsConnection->error);
 		echo "<div class='content-box'><h3>Fout</h3><p>Database fout opgetreden.</p></div>";
 		return;
 	}
@@ -26,8 +26,8 @@
 	$result = $stmt->get_result();
 	$num = $result->num_rows;
 
-	$SNLDBConnection->query("UPDATE `16915snldb`.`HITS` SET `searches` = searches + 1 WHERE CONVERT(`HITS`.`key` USING utf8) = '1'");
-	stats_day($SNLDBConnection, 'searches');
+	$CarpartsConnection->query("UPDATE `16915snldb`.`HITS` SET `searches` = searches + 1 WHERE CONVERT(`HITS`.`key` USING utf8) = '1'");
+	stats_day($CarpartsConnection, 'searches');
 
 	if ($num == 0) {
 ?>
@@ -118,7 +118,7 @@ function snlRDWCheck(k) {
 		$Choise_Engine     = $row['Choise_Engine'];
 		$Choise_Transmission = $row['Choise_Transmission'];
 
-		$SNLDBConnection->query("UPDATE `16915snldb`.`HITS` SET `searchhits` = searchhits + 1 WHERE CONVERT(`HITS`.`key` USING utf8) = '1'");
+		$CarpartsConnection->query("UPDATE `16915snldb`.`HITS` SET `searchhits` = searchhits + 1 WHERE CONVERT(`HITS`.`key` USING utf8) = '1'");
 
 		$stripLicense = strtoupper(preg_replace('/\s*/m', '', $License));
 		$sl = htmlspecialchars($stripLicense, ENT_QUOTES);
@@ -158,7 +158,7 @@ function snlRDWCheck(k) {
 	}
 
 	$stmt->close();
-	mysqli_close($SNLDBConnection);
+	mysqli_close($CarpartsConnection);
 ?>
 
 

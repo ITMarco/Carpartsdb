@@ -2,18 +2,18 @@
 include 'connection.php';
 include_once 'parts_helper.php';
 
-parts_ensure_table($SNLDBConnection);
+parts_ensure_table($CarpartsConnection);
 
 $id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 if ($id <= 0) {
-    mysqli_close($SNLDBConnection);
+    mysqli_close($CarpartsConnection);
     echo "<div class='content-box'><p>Invalid part ID.</p><p><a href='index.php?navigate=browse'>Back to browse</a></p></div>";
     return;
 }
 
 $is_member = !empty($_SESSION['is_member']) || !empty($_SESSION['isadmin']);
 
-$part = parts_get($SNLDBConnection, $id, true);
+$part = parts_get($CarpartsConnection, $id, true);
 
 $is_seller = $part && isset($_SESSION['user_id']) && (int)$_SESSION['user_id'] === (int)$part['seller_id'];
 
@@ -26,7 +26,7 @@ if ($part) {
     }
 }
 
-mysqli_close($SNLDBConnection);
+mysqli_close($CarpartsConnection);
 
 if (!$part) {
     echo "<div class='content-box'><p>Part not found.</p><p><a href='index.php?navigate=browse'>Back to browse</a></p></div>";

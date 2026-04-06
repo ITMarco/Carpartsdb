@@ -56,7 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
 
     // Check if license already exists
-    $stmt = $SNLDBConnection->prepare("SELECT RECNO FROM SNLDB WHERE License = ?");
+    $stmt = $CarpartsConnection->prepare("SELECT RECNO FROM SNLDB WHERE License = ?");
     $stmt->bind_param("s", $License);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -66,7 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         echo "<p><a href='index.php?navigate=importfromurl'>Terug</a> | ";
         echo "<a href='index.php?navigate=adminedit'>Bewerk bestaande supra</a></p>";
         $stmt->close();
-        mysqli_close($SNLDBConnection);
+        mysqli_close($CarpartsConnection);
         echo "</div>";
         return;
     }
@@ -80,11 +80,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $date = date("Y-m-d H:i:s");
 
     // Insert new car
-    $stmt = $SNLDBConnection->prepare("INSERT INTO SNLDB (License, Owner_display, Choise_Model, Choise_Engine, Choise_Transmission, Build_date, Registration_date, Milage, Choise_Status, VIN_Colorcode, MA, Mods, History, moddate, insertdate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    $stmt = $CarpartsConnection->prepare("INSERT INTO SNLDB (License, Owner_display, Choise_Model, Choise_Engine, Choise_Transmission, Build_date, Registration_date, Milage, Choise_Status, VIN_Colorcode, MA, Mods, History, moddate, insertdate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
     if (!$stmt) {
-        echo "<div style='color: red;'><strong>Database fout:</strong> " . htmlspecialchars($SNLDBConnection->error) . "</div>";
-        mysqli_close($SNLDBConnection);
+        echo "<div style='color: red;'><strong>Database fout:</strong> " . htmlspecialchars($CarpartsConnection->error) . "</div>";
+        mysqli_close($CarpartsConnection);
         echo "</div>";
         return;
     }
@@ -94,7 +94,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if ($stmt->execute()) {
         $new_recno = $stmt->insert_id;
         include_once 'car_stats_helper.php';
-        car_changelog_log($SNLDBConnection, $License, 'new');
+        car_changelog_log($CarpartsConnection, $License, 'new');
 
         echo "<div style='background-color: #d4edda; border: 1px solid #28a745; padding: 15px; border-radius: 4px; margin: 20px 0;'>";
         echo "<h3 style='color: green;'>✓ Supra succesvol toegevoegd aan database!</h3>";
@@ -141,7 +141,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
 
     $stmt->close();
-    mysqli_close($SNLDBConnection);
+    mysqli_close($CarpartsConnection);
 
 } else {
     echo "<div style='color: red;'>Ongeldige aanvraag.</div>";

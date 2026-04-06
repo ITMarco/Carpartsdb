@@ -4,9 +4,9 @@
 
 include 'connection.php';
 
-if (empty($SNLDBConnection) || $SNLDBConnection->connect_error) {
+if (empty($CarpartsConnection) || $CarpartsConnection->connect_error) {
     echo "<div class='content-box'><h3>Fout</h3><p>Database verbinding mislukt."
-       . (isset($SNLDBConnection) ? ' ' . htmlspecialchars($SNLDBConnection->connect_error) : '') . "</p></div>";
+       . (isset($CarpartsConnection) ? ' ' . htmlspecialchars($CarpartsConnection->connect_error) : '') . "</p></div>";
     return;
 }
 
@@ -17,7 +17,7 @@ if ($kenteken === '') {
     return;
 }
 
-$stmt = $SNLDBConnection->prepare("SELECT * FROM SNLDB WHERE License LIKE ?");
+$stmt = $CarpartsConnection->prepare("SELECT * FROM SNLDB WHERE License LIKE ?");
 if (!$stmt) {
     echo "<div class='content-box'><p>Database fout.</p></div>";
     return;
@@ -28,9 +28,9 @@ $stmt->execute();
 $result = $stmt->get_result();
 
 if ($result === false) {
-    echo "<div class='content-box'><h3>Fout</h3><p>Query mislukt: " . htmlspecialchars($SNLDBConnection->error) . "</p></div>";
+    echo "<div class='content-box'><h3>Fout</h3><p>Query mislukt: " . htmlspecialchars($CarpartsConnection->error) . "</p></div>";
     $stmt->close();
-    mysqli_close($SNLDBConnection);
+    mysqli_close($CarpartsConnection);
     return;
 }
 
@@ -41,7 +41,7 @@ if ($result->num_rows === 0) {
        . "<p><button onclick=\"location.href='index.php?navigate=contribute&amp;kenteken="
        . urlencode($kenteken) . "'\" class='btn'>➕ Voeg de supra toe</button></p></div>";
     $stmt->close();
-    mysqli_close($SNLDBConnection);
+    mysqli_close($CarpartsConnection);
     return;
 }
 
@@ -400,5 +400,5 @@ while ($row = $result->fetch_assoc()):
 endwhile;
 
 $stmt->close();
-mysqli_close($SNLDBConnection);
+mysqli_close($CarpartsConnection);
 ?>

@@ -539,7 +539,7 @@ elseif ($step === 'quickupload'):
         echo "<p style='color:red;'>Ongeldig kenteken. <a href='index.php?navigate=contribute'>&larr; Opnieuw</a></p>";
     } else {
         include 'connection.php';
-        $stmt = $SNLDBConnection->prepare("SELECT License FROM SNLDB WHERE License = ?");
+        $stmt = $CarpartsConnection->prepare("SELECT License FROM SNLDB WHERE License = ?");
         $found = false;
         if ($stmt) {
             $stmt->bind_param("s", $stripLicense);
@@ -548,7 +548,7 @@ elseif ($step === 'quickupload'):
             $found = ($stmt->num_rows > 0);
             $stmt->close();
         }
-        mysqli_close($SNLDBConnection);
+        mysqli_close($CarpartsConnection);
         if ($found) {
             contrib_show_upload_form($stripLicense);
         } else {
@@ -575,7 +575,7 @@ elseif ($step === 'check'):
             // Check SNLDB — fetch full details so we can show a confirm card
             include 'connection.php';
             $found_car = null;
-            $stmt = $SNLDBConnection->prepare(
+            $stmt = $CarpartsConnection->prepare(
                 "SELECT License, Choise_Model, Choise_Engine, Build_date FROM SNLDB WHERE License = ? LIMIT 1"
             );
             if ($stmt) {
@@ -584,9 +584,9 @@ elseif ($step === 'check'):
                 $found_car = $stmt->get_result()->fetch_assoc();
                 $stmt->close();
             } else {
-                error_log("contribute.php: prepare failed: " . $SNLDBConnection->error);
+                error_log("contribute.php: prepare failed: " . $CarpartsConnection->error);
             }
-            mysqli_close($SNLDBConnection);
+            mysqli_close($CarpartsConnection);
             $found_in_db = ($found_car !== null);
 
             if ($found_in_db) {
@@ -827,7 +827,7 @@ elseif ($step === 'upload'):
         } else {
             // Re-verify license exists in SNLDB
             include 'connection.php';
-            $stmt = $SNLDBConnection->prepare("SELECT License FROM SNLDB WHERE License = ?");
+            $stmt = $CarpartsConnection->prepare("SELECT License FROM SNLDB WHERE License = ?");
             $found_in_db = false;
             if ($stmt) {
                 $stmt->bind_param("s", $stripLicense);
@@ -836,7 +836,7 @@ elseif ($step === 'upload'):
                 $found_in_db = ($stmt->num_rows > 0);
                 $stmt->close();
             }
-            mysqli_close($SNLDBConnection);
+            mysqli_close($CarpartsConnection);
 
             if (!$found_in_db) {
                 echo "<p style='color:red;'>Supra <strong>" . htmlspecialchars($stripLicense) . "</strong> niet gevonden in de database. Upload geannuleerd.</p>";
@@ -859,17 +859,17 @@ elseif ($step === 'upload'):
                     include 'connection.php';
                     include 'stats_helper.php';
                     include 'photo_recent_helper.php';
-                    $upd = $SNLDBConnection->prepare("UPDATE SNLDB SET History = CONCAT(COALESCE(History, ''), ?), moddate = NOW() WHERE License = ?");
+                    $upd = $CarpartsConnection->prepare("UPDATE SNLDB SET History = CONCAT(COALESCE(History, ''), ?), moddate = NOW() WHERE License = ?");
                     if ($upd) {
                         $upd->bind_param("ss", $note, $stripLicense);
                         $upd->execute();
                         $upd->close();
                     }
-                    stats_day($SNLDBConnection, 'images_added', $uploaded);
+                    stats_day($CarpartsConnection, 'images_added', $uploaded);
                     foreach ($saved_files as $fn) {
-                        photo_recent_add($SNLDBConnection, $stripLicense, $fn);
+                        photo_recent_add($CarpartsConnection, $stripLicense, $fn);
                     }
-                    mysqli_close($SNLDBConnection);
+                    mysqli_close($CarpartsConnection);
                 }
 
                 contrib_step_indicator(3);
@@ -903,7 +903,7 @@ elseif ($step === 'review'):
             include 'connection.php';
 
             // Duplicate check
-            $stmt_chk = $SNLDBConnection->prepare("SELECT License FROM SNLDB WHERE License = ?");
+            $stmt_chk = $CarpartsConnection->prepare("SELECT License FROM SNLDB WHERE License = ?");
             $already_exists = false;
             if ($stmt_chk) {
                 $stmt_chk->bind_param("s", $stripLicense);
@@ -949,7 +949,7 @@ elseif ($step === 'review'):
                 );
                 $History = $history_auto . $rdw_dump . ($history_user ? "\n\n" . $history_user : '');
 
-                $stmt = $SNLDBConnection->prepare(
+                $stmt = $CarpartsConnection->prepare(
                     "INSERT INTO SNLDB (License, Owner_display, Choise_Model, Choise_Engine, " .
                     "Choise_Transmission, Build_date, Registration_date, Milage, Choise_Status, " .
                     "VIN_Number, VIN_Modelcode, VIN_Colorcode, MA, Mods, History, RECNO, moddate) " .
@@ -957,9 +957,9 @@ elseif ($step === 'review'):
                 );
 
                 if (!$stmt) {
-                    error_log("contribute.php insert prepare failed: " . $SNLDBConnection->error);
+                    error_log("contribute.php insert prepare failed: " . $CarpartsConnection->error);
                     echo "<p style='color:red;'>Database fout. Probeer het later opnieuw.</p>";
-                    mysqli_close($SNLDBConnection);
+                    mysqli_close($CarpartsConnection);
                 } else {
                     $owner_display = "Onbekend";
                     $stmt->bind_param(
@@ -973,9 +973,9 @@ elseif ($step === 'review'):
                         $stmt->close();
                         include 'stats_helper.php';
                         include_once 'car_stats_helper.php';
-                        stats_day($SNLDBConnection, 'supras_added');
-                        car_changelog_log($SNLDBConnection, $stripLicense, 'new');
-                        mysqli_close($SNLDBConnection);
+                        stats_day($CarpartsConnection, 'supras_added');
+                        car_changelog_log($CarpartsConnection, $stripLicense, 'new');
+                        mysqli_close($CarpartsConnection);
 
                         // Create folder structure
                         $MyStruct = './cars/' . $stripLicense . '/slides/';
@@ -989,7 +989,7 @@ elseif ($step === 'review'):
                         contrib_show_upload_form($stripLicense, "Upload nu foto's van de supra:");
                     } else {
                         $stmt->close();
-                        mysqli_close($SNLDBConnection);
+                        mysqli_close($CarpartsConnection);
                         echo "<p style='color:red;'>Fout bij opslaan in de database. Probeer het later opnieuw.</p>";
                     }
                 }
@@ -1028,9 +1028,9 @@ elseif ($step === 'insert_upload'):
                 include 'connection.php';
                 include 'photo_recent_helper.php';
                 foreach ($saved_files as $fn) {
-                    photo_recent_add($SNLDBConnection, $stripLicense, $fn);
+                    photo_recent_add($CarpartsConnection, $stripLicense, $fn);
                 }
-                mysqli_close($SNLDBConnection);
+                mysqli_close($CarpartsConnection);
             }
             contrib_step_indicator(3, ['Kenteken', 'Supra toevoegen', "Foto's uploaden"]);
             echo "<p style='color:green;font-weight:bold;'>&#10003; Bedankt voor je bijdrage!</p>";

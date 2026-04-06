@@ -11,27 +11,27 @@ if (!isset($_SESSION['csrf_token'])) {
 include 'connection.php';
 include_once 'parts_helper.php';
 
-parts_ensure_table($SNLDBConnection);
+parts_ensure_table($CarpartsConnection);
 
 $id = isset($_GET['id']) ? intval($_GET['id']) : (isset($_POST['id']) ? intval($_POST['id']) : 0);
 
 if ($id <= 0) {
     echo "<div class='content-box'><p>Invalid ID.</p></div>";
-    mysqli_close($SNLDBConnection);
+    mysqli_close($CarpartsConnection);
     return;
 }
 
-$part = parts_get($SNLDBConnection, $id, true);
+$part = parts_get($CarpartsConnection, $id, true);
 if (!$part) {
     echo "<div class='content-box'><p>Part not found.</p></div>";
-    mysqli_close($SNLDBConnection);
+    mysqli_close($CarpartsConnection);
     return;
 }
 
 $is_seller = isset($_SESSION['user_id']) && (int)$_SESSION['user_id'] === (int)$part['seller_id'];
 if (!$is_seller && empty($_SESSION['isadmin'])) {
     echo "<div class='content-box'><p style='color:red;'>Access denied.</p></div>";
-    mysqli_close($SNLDBConnection);
+    mysqli_close($CarpartsConnection);
     return;
 }
 
@@ -40,15 +40,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!isset($_POST['csrf_token'], $_SESSION['csrf_token'])
         || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
         echo "<div class='content-box'><p style='color:red;'>Security validation failed.</p></div>";
-        mysqli_close($SNLDBConnection);
+        mysqli_close($CarpartsConnection);
         return;
     }
 
-    $stmt = $SNLDBConnection->prepare("DELETE FROM `PARTS` WHERE `id` = ?");
+    $stmt = $CarpartsConnection->prepare("DELETE FROM `PARTS` WHERE `id` = ?");
     $stmt->bind_param('i', $id);
     $ok = $stmt->execute();
     $stmt->close();
-    mysqli_close($SNLDBConnection);
+    mysqli_close($CarpartsConnection);
 
     if ($ok) {
         // Remove photo directory
@@ -65,7 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     return;
 }
 
-mysqli_close($SNLDBConnection);
+mysqli_close($CarpartsConnection);
 ?>
 <div class="content-box">
 <h3>Delete part?</h3>

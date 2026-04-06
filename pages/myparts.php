@@ -8,11 +8,11 @@ include 'connection.php';
 include_once 'parts_helper.php';
 include_once 'makes_helper.php';
 
-parts_ensure_table($SNLDBConnection);
+parts_ensure_table($CarpartsConnection);
 
 $seller_id = (int)$_SESSION['user_id'];
 
-$stmt = $SNLDBConnection->prepare(
+$stmt = $CarpartsConnection->prepare(
     "SELECT p.`id`, p.`title`, p.`price`, p.`condition`, p.`year_from`, p.`year_to`,
             p.`stock`, p.`visible`, p.`visible_private`, p.`for_sale`,
             m.`name` AS make_name, mo.`name` AS model_name, p.`created_at`
@@ -33,7 +33,7 @@ if ($stmt) {
     $stmt->close();
 }
 
-mysqli_close($SNLDBConnection);
+mysqli_close($CarpartsConnection);
 ?>
 
 <div class="content-box">

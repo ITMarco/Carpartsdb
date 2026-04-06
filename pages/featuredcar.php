@@ -20,22 +20,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $lic = strtoupper(preg_replace('/[^A-Z0-9]/i', '', trim($_POST['featured_license'] ?? '')));
         $cap = trim($_POST['featured_caption'] ?? '');
         $img = trim($_POST['featured_image'] ?? '');
-        settings_set($SNLDBConnection, 'featured_license', $lic);
-        settings_set($SNLDBConnection, 'featured_caption', $cap);
-        settings_set($SNLDBConnection, 'featured_image',   $img);
+        settings_set($CarpartsConnection, 'featured_license', $lic);
+        settings_set($CarpartsConnection, 'featured_caption', $cap);
+        settings_set($CarpartsConnection, 'featured_image',   $img);
         $msg = '<div style="color:green;padding:8px 0;">✓ Supra van de maand bijgewerkt!</div>';
     }
 }
 
-$cur_lic = settings_get($SNLDBConnection, 'featured_license', '');
-$cur_cap = settings_get($SNLDBConnection, 'featured_caption', '');
-$cur_img = settings_get($SNLDBConnection, 'featured_image',   '');
+$cur_lic = settings_get($CarpartsConnection, 'featured_license', '');
+$cur_cap = settings_get($CarpartsConnection, 'featured_caption', '');
+$cur_img = settings_get($CarpartsConnection, 'featured_image',   '');
 
 // Look up the current featured car
 $featured_car = null;
 if ($cur_lic !== '') {
     $fl  = '%' . $cur_lic . '%';
-    $fst = $SNLDBConnection->prepare(
+    $fst = $CarpartsConnection->prepare(
         "SELECT * FROM SNLDB WHERE REPLACE(REPLACE(License,'-',''),' ','') LIKE ? LIMIT 1"
     );
     if ($fst) {

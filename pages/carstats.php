@@ -6,8 +6,8 @@ if (!isset($_SESSION['isadmin']) || $_SESSION['isadmin'] !== 1) {
 
 include 'connection.php';
 include_once 'car_stats_helper.php';
-car_stats_init($SNLDBConnection);
-car_stats_cleanup($SNLDBConnection);
+car_stats_init($CarpartsConnection);
+car_stats_cleanup($CarpartsConnection);
 
 $now   = time();
 $day30 = $now - 30 * 86400;
@@ -15,19 +15,19 @@ $day7  = $now - 7  * 86400;
 $day1  = $now - 86400;
 
 // Top 10 all-time views
-$top_all = $SNLDBConnection->query(
+$top_all = $CarpartsConnection->query(
     "SELECT license, COUNT(*) AS cnt FROM CAR_VIEWS WHERE event_type='view'
      GROUP BY license ORDER BY cnt DESC LIMIT 10"
 );
 
 // Top 10 last 30 days
-$top_30 = $SNLDBConnection->query(
+$top_30 = $CarpartsConnection->query(
     "SELECT license, COUNT(*) AS cnt FROM CAR_VIEWS WHERE event_type='view' AND view_time > $day30
      GROUP BY license ORDER BY cnt DESC LIMIT 10"
 );
 
 // Top 10 IPs last 24h
-$top_ip_day = $SNLDBConnection->query(
+$top_ip_day = $CarpartsConnection->query(
     "SELECT ip, COUNT(*) AS cnt,
             GROUP_CONCAT(DISTINCT license ORDER BY license SEPARATOR ', ') AS cars
      FROM CAR_VIEWS WHERE event_type='view' AND view_time > $day1
@@ -35,7 +35,7 @@ $top_ip_day = $SNLDBConnection->query(
 );
 
 // Top 10 IPs last 30 days
-$top_ip_30 = $SNLDBConnection->query(
+$top_ip_30 = $CarpartsConnection->query(
     "SELECT ip, COUNT(*) AS cnt,
             GROUP_CONCAT(DISTINCT license ORDER BY license SEPARATOR ', ') AS cars
      FROM CAR_VIEWS WHERE event_type='view' AND view_time > $day30
@@ -43,13 +43,13 @@ $top_ip_30 = $SNLDBConnection->query(
 );
 
 // Recent views (last 100)
-$recent_views = $SNLDBConnection->query(
+$recent_views = $CarpartsConnection->query(
     "SELECT license, ip, user_agent, view_time FROM CAR_VIEWS
      WHERE event_type='view' ORDER BY view_time DESC LIMIT 100"
 );
 
 // Recent edits (last 50) — from SNLDB_CHANGELOG joined with SNLDB
-$recent_edits = $SNLDBConnection->query(
+$recent_edits = $CarpartsConnection->query(
     "SELECT c.license, c.change_type, c.changed_at,
             s.Choise_Model, s.Choise_Status, s.Owner_display
      FROM SNLDB_CHANGELOG c
@@ -58,19 +58,19 @@ $recent_edits = $SNLDBConnection->query(
 );
 
 // Totals
-$r = $SNLDBConnection->query("SELECT COUNT(*) FROM CAR_VIEWS WHERE event_type='view' AND view_time > $day1");
+$r = $CarpartsConnection->query("SELECT COUNT(*) FROM CAR_VIEWS WHERE event_type='view' AND view_time > $day1");
 $views_today = $r ? $r->fetch_row()[0] : 0;
 
-$r = $SNLDBConnection->query("SELECT COUNT(*) FROM CAR_VIEWS WHERE event_type='view' AND view_time > $day7");
+$r = $CarpartsConnection->query("SELECT COUNT(*) FROM CAR_VIEWS WHERE event_type='view' AND view_time > $day7");
 $views_week = $r ? $r->fetch_row()[0] : 0;
 
-$r = $SNLDBConnection->query("SELECT COUNT(*) FROM CAR_VIEWS WHERE event_type='view' AND view_time > $day30");
+$r = $CarpartsConnection->query("SELECT COUNT(*) FROM CAR_VIEWS WHERE event_type='view' AND view_time > $day30");
 $views_month = $r ? $r->fetch_row()[0] : 0;
 
-$r = $SNLDBConnection->query("SELECT COUNT(*) FROM CAR_VIEWS WHERE event_type='view'");
+$r = $CarpartsConnection->query("SELECT COUNT(*) FROM CAR_VIEWS WHERE event_type='view'");
 $views_total = $r ? $r->fetch_row()[0] : 0;
 
-mysqli_close($SNLDBConnection);
+mysqli_close($CarpartsConnection);
 
 function fmt_time($t) {
     return date('d-m-Y H:i', $t);

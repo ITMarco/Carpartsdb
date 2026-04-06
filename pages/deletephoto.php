@@ -35,14 +35,14 @@ if (!file_exists($path) || !is_file($path)) {
 if (unlink($path)) {
     include 'connection.php';
     include_once 'car_stats_helper.php';
-    $upd = $SNLDBConnection->prepare("UPDATE SNLDB SET moddate = NOW() WHERE License = ?");
+    $upd = $CarpartsConnection->prepare("UPDATE SNLDB SET moddate = NOW() WHERE License = ?");
     if ($upd) {
         $upd->bind_param("s", $license);
         $upd->execute();
         $upd->close();
     }
-    car_changelog_log($SNLDBConnection, $license, 'photodel');
-    mysqli_close($SNLDBConnection);
+    car_changelog_log($CarpartsConnection, $license, 'photodel');
+    mysqli_close($CarpartsConnection);
     echo "<div style='background:#d4edda;border:1px solid #28a745;padding:12px 16px;border-radius:4px;margin:10px 0;'>
             ✓ Foto <strong>" . htmlspecialchars($filename) . "</strong> verwijderd.
             <a href='index.php?navigate=" . urlencode($license) . "' style='margin-left:12px;'>← Terug naar supra</a>

@@ -188,9 +188,9 @@ A floating 🎨 button appears bottom-right when at least one theme is marked pu
 <?php
 if (!defined('SNLDBCARPARTS_ACCESS')) define('SNLDBCARPARTS_ACCESS', true);
 require_once __DIR__ . '/config.php';
-$SNLDBConnection = mysqli_connect(DB_HOST, DB_USER, DB_PASS, DB_NAME);
-if (!$SNLDBConnection) die('Database connection failed: ' . mysqli_connect_error());
-$SNLDBConnection->set_charset('utf8mb4');
+$CarpartsConnection = mysqli_connect(DB_HOST, DB_USER, DB_PASS, DB_NAME);
+if (!$CarpartsConnection) die('Database connection failed: ' . mysqli_connect_error());
+$CarpartsConnection->set_charset('utf8mb4');
 ```
 
 ---

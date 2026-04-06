@@ -18,27 +18,27 @@ if (!isset($_POST['csrf_token'], $_SESSION['csrf_token'])
 include 'connection.php';
 include_once 'parts_helper.php';
 
-parts_ensure_table($SNLDBConnection);
+parts_ensure_table($CarpartsConnection);
 
 $id = intval($_POST['id'] ?? 0);
 if ($id <= 0) {
     echo "<div class='content-box'><p style='color:red;'>Invalid part ID.</p></div>";
-    mysqli_close($SNLDBConnection);
+    mysqli_close($CarpartsConnection);
     return;
 }
 
 // Fetch existing to check ownership
-$existing = parts_get($SNLDBConnection, $id, true);
+$existing = parts_get($CarpartsConnection, $id, true);
 if (!$existing) {
     echo "<div class='content-box'><p style='color:red;'>Part not found.</p></div>";
-    mysqli_close($SNLDBConnection);
+    mysqli_close($CarpartsConnection);
     return;
 }
 
 $is_seller = isset($_SESSION['user_id']) && (int)$_SESSION['user_id'] === (int)$existing['seller_id'];
 if (!$is_seller && empty($_SESSION['isadmin'])) {
     echo "<div class='content-box'><p style='color:red;'>Access denied.</p></div>";
-    mysqli_close($SNLDBConnection);
+    mysqli_close($CarpartsConnection);
     return;
 }
 
@@ -60,11 +60,11 @@ $for_sale    = (isset($_POST['for_sale']) && $_POST['for_sale'] == '1') ? 1 : 0;
 if (empty($title) || $make_id <= 0 || $year_from < 1940) {
     echo "<div class='content-box'><p style='color:red;'>Title, make and year are required.</p>"
          . "<p><a href='index.php?navigate=editpart&id={$id}'>Back</a></p></div>";
-    mysqli_close($SNLDBConnection);
+    mysqli_close($CarpartsConnection);
     return;
 }
 
-$stmt = $SNLDBConnection->prepare(
+$stmt = $CarpartsConnection->prepare(
     "UPDATE `PARTS` SET
         `make_id`=?, `model_id`=?, `title`=?, `description`=?,
         `year_from`=?, `year_to`=?, `price`=?, `condition`=?, `stock`=?,
@@ -80,12 +80,12 @@ $stmt->bind_param(
 
 if ($stmt->execute()) {
     $stmt->close();
-    mysqli_close($SNLDBConnection);
+    mysqli_close($CarpartsConnection);
     header("Location: index.php?navigate=viewpart&id={$id}");
     exit();
 } else {
     echo "<div class='content-box'><p style='color:red;'>Error updating part: "
          . htmlspecialchars($stmt->error) . "</p></div>";
     $stmt->close();
-    mysqli_close($SNLDBConnection);
+    mysqli_close($CarpartsConnection);
 }

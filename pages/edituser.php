@@ -13,12 +13,12 @@ if (!isset($_SESSION['csrf_token'])) {
 
 include 'connection.php';
 include_once 'users_helper.php';
-users_ensure_table($SNLDBConnection);
+users_ensure_table($CarpartsConnection);
 
 $selected_id = isset($_POST['userid']) ? intval($_POST['userid']) : 0;
 
 if ($selected_id > 0) {
-    $user = users_get_by_id($SNLDBConnection, $selected_id);
+    $user = users_get_by_id($CarpartsConnection, $selected_id);
 
     if ($user):
 ?>
@@ -83,7 +83,7 @@ function confirmDelete() {
 
 } else {
     // Show user selection list
-    $result = $SNLDBConnection->query(
+    $result = $CarpartsConnection->query(
         "SELECT `id`,`email`,`realname`,`isadmin`,`is_member` FROM `USERS` ORDER BY `email` ASC"
     );
 ?>
@@ -108,5 +108,5 @@ function confirmDelete() {
 </form>
 <?php } ?>
 
-<?php mysqli_close($SNLDBConnection); ?>
+<?php mysqli_close($CarpartsConnection); ?>
 </div>

@@ -4,8 +4,8 @@ include 'stats_helper.php';
 include_once 'settings_helper.php';
 include_once 'parts_helper.php';
 
-stats_session_check($SNLDBConnection);
-parts_ensure_table($SNLDBConnection);
+stats_session_check($CarpartsConnection);
+parts_ensure_table($CarpartsConnection);
 
 // ── Stats ─────────────────────────────────────────────────────────────────────
 $total_parts  = 0;
@@ -13,18 +13,18 @@ $total_makes  = 0;
 $total_sellers = 0;
 $recent_parts = [];
 
-$r = $SNLDBConnection->query("SELECT COUNT(*) FROM `PARTS` WHERE `visible`=1");
+$r = $CarpartsConnection->query("SELECT COUNT(*) FROM `PARTS` WHERE `visible`=1");
 if ($r) $total_parts = (int)$r->fetch_row()[0];
 
-$r = $SNLDBConnection->query("SELECT COUNT(DISTINCT `make_id`) FROM `PARTS` WHERE `visible`=1");
+$r = $CarpartsConnection->query("SELECT COUNT(DISTINCT `make_id`) FROM `PARTS` WHERE `visible`=1");
 if ($r) $total_makes = (int)$r->fetch_row()[0];
 
-$r = $SNLDBConnection->query("SELECT COUNT(DISTINCT `seller_id`) FROM `PARTS` WHERE `visible`=1");
+$r = $CarpartsConnection->query("SELECT COUNT(DISTINCT `seller_id`) FROM `PARTS` WHERE `visible`=1");
 if ($r) $total_sellers = (int)$r->fetch_row()[0];
 
 // Top 10 makes by part count
 $top_makes = [];
-$mq = $SNLDBConnection->query(
+$mq = $CarpartsConnection->query(
     "SELECT m.`name`, COUNT(p.`id`) AS cnt
      FROM `PARTS` p
      JOIN `CAR_MAKES` m ON m.`id` = p.`make_id`
@@ -36,7 +36,7 @@ if ($mq) while ($mr = $mq->fetch_assoc()) $top_makes[] = $mr;
 
 // Condition breakdown
 $cond_counts = array_fill(0, 6, 0);
-$cq = $SNLDBConnection->query(
+$cq = $CarpartsConnection->query(
     "SELECT `condition`, COUNT(*) AS cnt FROM `PARTS` WHERE `visible`=1 GROUP BY `condition`"
 );
 if ($cq) while ($cr = $cq->fetch_assoc()) {
@@ -44,7 +44,7 @@ if ($cq) while ($cr = $cq->fetch_assoc()) {
 }
 
 // Recent parts (last 6)
-$rq = $SNLDBConnection->query(
+$rq = $CarpartsConnection->query(
     "SELECT p.`id`, p.`title`, p.`price`, p.`condition`, p.`year_from`, p.`year_to`, p.`created_at`,
             m.`name` AS make_name, mo.`name` AS model_name
      FROM `PARTS` p
@@ -56,7 +56,7 @@ $rq = $SNLDBConnection->query(
 if ($rq) while ($rr = $rq->fetch_assoc()) $recent_parts[] = $rr;
 
 // Monthly stats
-$mstats = $SNLDBConnection->query(
+$mstats = $CarpartsConnection->query(
     "SELECT DATE_FORMAT(stat_date,'%Y-%m') AS maand,
             SUM(sessions)    AS sessions,
             SUM(searches)    AS searches,
@@ -68,7 +68,7 @@ $mstats = $SNLDBConnection->query(
 );
 
 // News
-$SNLDBConnection->query("CREATE TABLE IF NOT EXISTS HOME_NEWS (
+$CarpartsConnection->query("CREATE TABLE IF NOT EXISTS HOME_NEWS (
     id INT AUTO_INCREMENT PRIMARY KEY,
     title VARCHAR(200) NOT NULL,
     body TEXT NOT NULL,
@@ -77,7 +77,7 @@ $SNLDBConnection->query("CREATE TABLE IF NOT EXISTS HOME_NEWS (
     visible TINYINT(1) NOT NULL DEFAULT 1
 )");
 $news_items = [];
-$nq = $SNLDBConnection->query(
+$nq = $CarpartsConnection->query(
     "SELECT title, body FROM HOME_NEWS WHERE visible=1 ORDER BY sort_order DESC, news_date DESC"
 );
 if ($nq) while ($nr = $nq->fetch_assoc()) $news_items[] = $nr;
@@ -219,4 +219,4 @@ if ($nq) while ($nr = $nq->fetch_assoc()) $news_items[] = $nr;
 </div>
 <?php endforeach; ?>
 
-<?php mysqli_close($SNLDBConnection); ?>
+<?php mysqli_close($CarpartsConnection); ?>

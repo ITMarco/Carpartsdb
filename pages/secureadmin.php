@@ -30,12 +30,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!defined('SNLDBCARPARTS_ACCESS')) define('SNLDBCARPARTS_ACCESS', true);
             require_once __DIR__ . '/../connection.php';
             include_once __DIR__ . '/../users_helper.php';
-            users_ensure_table($SNLDBConnection);
+            users_ensure_table($CarpartsConnection);
 
             $email        = isset($_POST['email']) ? strtolower(trim($_POST['email'])) : '';
             $userpassword = $_POST['userpassword'] ?? '';
 
-            $myrow = users_get_by_email($SNLDBConnection, $email);
+            $myrow = users_get_by_email($CarpartsConnection, $email);
 
             if ($myrow && password_verify($userpassword, $myrow['password'])) {
                 reset_login_attempts();
@@ -50,7 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['LAST_ACTIVITY']  = time();
                 $_SESSION['HTTP_USER_AGENT']= $_SERVER['HTTP_USER_AGENT'];
 
-                mysqli_close($SNLDBConnection);
+                mysqli_close($CarpartsConnection);
                 $dest = ($myrow['isadmin'] == 1) ? 'adminpanel' : 'browse';
                 header("Location: index.php?navigate={$dest}");
                 exit();
@@ -66,7 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
 
-            if (isset($SNLDBConnection)) mysqli_close($SNLDBConnection);
+            if (isset($CarpartsConnection)) mysqli_close($CarpartsConnection);
         }
     }
 }

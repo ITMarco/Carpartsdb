@@ -63,7 +63,7 @@ $date = date('Y-m-d H:i:s');
 
 // Fetch current owner name + owner history (admin-only field, never submitted via form)
 $Owner_history = '';
-$cur = $SNLDBConnection->prepare("SELECT Owner_display, Owner_history FROM SNLDB WHERE RECNO = ? AND License = ?");
+$cur = $CarpartsConnection->prepare("SELECT Owner_display, Owner_history FROM SNLDB WHERE RECNO = ? AND License = ?");
 if ($cur) {
     $cur->bind_param('is', $recordnr, $License);
     $cur->execute();
@@ -78,7 +78,7 @@ if ($cur) {
     }
 }
 
-$stmt = $SNLDBConnection->prepare(
+$stmt = $CarpartsConnection->prepare(
     "UPDATE SNLDB
      SET Owner_display = ?, Owner_show = ?, Owner_history = ?,
          Choise_Model = ?, Choise_Engine = ?, Choise_Transmission = ?,
@@ -88,7 +88,7 @@ $stmt = $SNLDBConnection->prepare(
 );
 
 if (!$stmt) {
-    echo "<p style='color:#c04040;'>Database fout: " . htmlspecialchars($SNLDBConnection->error) . "</p>";
+    echo "<p style='color:#c04040;'>Database fout: " . htmlspecialchars($CarpartsConnection->error) . "</p>";
     echo "</div>";
     return;
 }

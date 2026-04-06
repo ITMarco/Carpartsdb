@@ -32,7 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'chang
         if (strlen($new_pass) < 6) {
             $pw_error = 'Nieuw wachtwoord moet minimaal 6 tekens zijn.';
         } else {
-            $st = $SNLDBConnection->prepare("SELECT userpass FROM PASSWRDS WHERE carlicense = ?");
+            $st = $CarpartsConnection->prepare("SELECT userpass FROM PASSWRDS WHERE carlicense = ?");
             $st->bind_param('s', $lic);
             $st->execute();
             $pw_row = $st->get_result()->fetch_assoc();
@@ -51,7 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'chang
                 $pw_error = 'Huidig wachtwoord is onjuist.';
             } else {
                 $hashed = password_hash($new_pass, PASSWORD_BCRYPT);
-                $upd = $SNLDBConnection->prepare("UPDATE PASSWRDS SET userpass = ? WHERE carlicense = ?");
+                $upd = $CarpartsConnection->prepare("UPDATE PASSWRDS SET userpass = ? WHERE carlicense = ?");
                 $upd->bind_param('ss', $hashed, $lic);
                 $pw_success = $upd->execute();
                 $upd->close();
@@ -70,7 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['userLicense'])) {
         $lic  = strtoupper(trim($_POST['userLicense'] ?? ''));
         $pass = $_POST['userpassword'] ?? '';
 
-        $stmt = $SNLDBConnection->prepare("SELECT * FROM PASSWRDS WHERE carlicense = ?");
+        $stmt = $CarpartsConnection->prepare("SELECT * FROM PASSWRDS WHERE carlicense = ?");
         if ($stmt) {
             $stmt->bind_param('s', $lic);
             $stmt->execute();
@@ -105,9 +105,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['userLicense'])) {
 
 // ── load car if authenticated ─────────────────────────────────────────────────
 if (!$error && isset($_SESSION['authenticated'], $_SESSION['user_license'])) {
-    if (!isset($SNLDBConnection)) include_once 'connection.php';
+    if (!isset($CarpartsConnection)) include_once 'connection.php';
     $ul   = $_SESSION['user_license'];
-    $stmt = $SNLDBConnection->prepare(
+    $stmt = $CarpartsConnection->prepare(
         "SELECT License, Owner_display, Owner_show, Choise_Model, Milage, Choise_Status,
                 Choise_Engine, Registration_date, Build_date, History, Mods,
                 MA, VIN_Colorcode, Choise_Transmission, RECNO

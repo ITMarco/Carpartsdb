@@ -4,8 +4,8 @@ include_once 'parts_helper.php';
 include_once 'makes_helper.php';
 include_once 'stats_helper.php';
 
-parts_ensure_table($SNLDBConnection);
-stats_day($SNLDBConnection, 'searches');
+parts_ensure_table($CarpartsConnection);
+stats_day($CarpartsConnection, 'searches');
 
 // ── Filters ───────────────────────────────────────────────────────────────────
 $filter_make  = isset($_GET['make'])  ? intval($_GET['make'])  : 0;
@@ -65,7 +65,7 @@ $base_sql  = "FROM `PARTS` p
 
 // Count total
 $total_rows = 0;
-$stmt = $SNLDBConnection->prepare("SELECT COUNT(*) {$base_sql}");
+$stmt = $CarpartsConnection->prepare("SELECT COUNT(*) {$base_sql}");
 if ($stmt) {
     if ($types) $stmt->bind_param($types, ...$params);
     $stmt->execute();
@@ -77,7 +77,7 @@ $total_pages = max(1, (int)ceil($total_rows / $per_page));
 
 // Fetch page
 $parts = [];
-$stmt  = $SNLDBConnection->prepare(
+$stmt  = $CarpartsConnection->prepare(
     "SELECT p.`id`, p.`title`, p.`price`, p.`condition`, p.`year_from`, p.`year_to`,
             p.`stock`, p.`oem_number`, p.`visible_private`, p.`for_sale`, p.`created_at`,
             m.`name` AS make_name, mo.`name` AS model_name
@@ -95,9 +95,9 @@ if ($stmt) {
     $stmt->close();
 }
 
-$makes       = makes_list($SNLDBConnection);
-$models_json = makes_all_models_json($SNLDBConnection);
-mysqli_close($SNLDBConnection);
+$makes       = makes_list($CarpartsConnection);
+$models_json = makes_all_models_json($CarpartsConnection);
+mysqli_close($CarpartsConnection);
 
 function browse_url(array $overrides = []): string {
     global $filter_make, $filter_model, $filter_year, $filter_cond, $filter_q;

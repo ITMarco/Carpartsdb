@@ -16,7 +16,7 @@ $passcorrect=false;
     $myLicense=strtoupper($_POST[userLicense]);
 
 	 $query="SELECT * FROM PASSWRDS WHERE carLicense ='$myLicense'";
-	 $result=$SNLDBConnection->query($query)or die( "Error in query: \n". mysqli_error());
+	 $result=$CarpartsConnection->query($query)or die( "Error in query: \n". mysqli_error());
 	 $myrow=$result->fetch_row();
 if ($myrow)
 {
@@ -38,7 +38,7 @@ echo "User not found.";
 }
 
  //$num=mysqli_num_rows($result);
-	mysqli_close($SNLDBConnection);
+	mysqli_close($CarpartsConnection);
 
 } else
 {

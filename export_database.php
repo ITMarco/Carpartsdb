@@ -170,7 +170,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $error_message = "Please select at least one table to export.";
     } else {
         foreach ($selected_tables as $table) {
-            $result = export_table_to_csv($SNLDBConnection, $table, $export_directory);
+            $result = export_table_to_csv($CarpartsConnection, $table, $export_directory);
             $result['table'] = $table;
             $export_results[] = $result;
         }
@@ -186,7 +186,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 }
 
 // Get all tables
-$tables = get_tables($SNLDBConnection);
+$tables = get_tables($CarpartsConnection);
 ?>
 <!DOCTYPE html>
 <html>
@@ -453,7 +453,7 @@ $tables = get_tables($SNLDBConnection);
                         <?php
                         // Get row count
                         $safe_table = preg_replace('/[^a-zA-Z0-9_]/', '', $table);
-                        $count_result = $SNLDBConnection->query("SELECT COUNT(*) as cnt FROM `$safe_table`");
+                        $count_result = $CarpartsConnection->query("SELECT COUNT(*) as cnt FROM `$safe_table`");
                         if ($count_result) {
                             $count_row = $count_result->fetch_assoc();
                             echo '<span style="color: #666;"> (' . number_format($count_row['cnt']) . ' rows)</span>';
@@ -495,5 +495,5 @@ $tables = get_tables($SNLDBConnection);
 </html>
 
 <?php
-mysqli_close($SNLDBConnection);
+mysqli_close($CarpartsConnection);
 ?>

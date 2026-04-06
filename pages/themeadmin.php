@@ -8,7 +8,7 @@ define('SNLDBCARPARTS_ACCESS', 1);
 include_once 'connection.php';
 include_once 'theme_helper.php';
 
-$db = $SNLDBConnection;
+$db = $CarpartsConnection;
 
 // Ensure CSRF token
 if (empty($_SESSION['csrf_token'])) {

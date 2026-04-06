@@ -20,32 +20,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         $action = $_POST['action'] ?? '';
         if ($action === 'toggle_comments') {
-            $cur = settings_get($SNLDBConnection, 'comments_enabled', '1');
-            settings_set($SNLDBConnection, 'comments_enabled', $cur === '1' ? '0' : '1');
+            $cur = settings_get($CarpartsConnection, 'comments_enabled', '1');
+            settings_set($CarpartsConnection, 'comments_enabled', $cur === '1' ? '0' : '1');
             $msg = '<div style="color:green;padding:4px 0;">✓ Instelling opgeslagen.</div>';
         } elseif ($action === 'toggle_video') {
-            $cur = settings_get($SNLDBConnection, 'comments_video_enabled', '1');
-            settings_set($SNLDBConnection, 'comments_video_enabled', $cur === '1' ? '0' : '1');
+            $cur = settings_get($CarpartsConnection, 'comments_video_enabled', '1');
+            settings_set($CarpartsConnection, 'comments_video_enabled', $cur === '1' ? '0' : '1');
             $msg = '<div style="color:green;padding:4px 0;">✓ Instelling opgeslagen.</div>';
         } elseif ($action === 'delete' && isset($_POST['comment_id'])) {
-            comment_delete($SNLDBConnection, (int)$_POST['comment_id']);
+            comment_delete($CarpartsConnection, (int)$_POST['comment_id']);
             $msg = '<div style="color:green;padding:4px 0;">✓ Reactie verwijderd.</div>';
         } elseif ($action === 'toggle' && isset($_POST['comment_id'])) {
-            comment_toggle($SNLDBConnection, (int)$_POST['comment_id']);
+            comment_toggle($CarpartsConnection, (int)$_POST['comment_id']);
             $msg = '<div style="color:green;padding:4px 0;">✓ Status gewijzigd.</div>';
         }
     }
 }
 
-$enabled       = settings_get($SNLDBConnection, 'comments_enabled',       '1') === '1';
-$video_enabled = settings_get($SNLDBConnection, 'comments_video_enabled', '1') === '1';
+$enabled       = settings_get($CarpartsConnection, 'comments_enabled',       '1') === '1';
+$video_enabled = settings_get($CarpartsConnection, 'comments_video_enabled', '1') === '1';
 
 // Mark all comments as seen by updating the last-seen timestamp
-settings_set($SNLDBConnection, 'comments_last_seen', date('Y-m-d H:i:s'));
+settings_set($CarpartsConnection, 'comments_last_seen', date('Y-m-d H:i:s'));
 
 // Fetch all comments (including unapproved) for admin overview
-comment_ensure_table($SNLDBConnection);
-$_all_res = $SNLDBConnection->query(
+comment_ensure_table($CarpartsConnection);
+$_all_res = $CarpartsConnection->query(
     "SELECT id, license, author, comment, ip, created_at, approved
      FROM CAR_COMMENTS ORDER BY created_at DESC LIMIT 200"
 );

@@ -12,12 +12,12 @@ include 'connection.php';
 include_once 'makes_helper.php';
 include_once 'parts_helper.php';
 
-makes_ensure_tables($SNLDBConnection);
-parts_ensure_table($SNLDBConnection);
+makes_ensure_tables($CarpartsConnection);
+parts_ensure_table($CarpartsConnection);
 
-$makes       = makes_list($SNLDBConnection);
-$models_json = makes_all_models_json($SNLDBConnection);
-mysqli_close($SNLDBConnection);
+$makes       = makes_list($CarpartsConnection);
+$models_json = makes_all_models_json($CarpartsConnection);
+mysqli_close($CarpartsConnection);
 ?>
 <div class="content-box">
 <h3>Add a part to your collection</h3>

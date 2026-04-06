@@ -125,19 +125,19 @@ if (strlen($myLicense) > 4)
                 include 'stats_helper.php';
                 include 'photo_recent_helper.php';
                 include_once 'car_stats_helper.php';
-                $upd = $SNLDBConnection->prepare("UPDATE SNLDB SET moddate = NOW() WHERE License = ?");
+                $upd = $CarpartsConnection->prepare("UPDATE SNLDB SET moddate = NOW() WHERE License = ?");
                 if ($upd) {
                     $upd->bind_param("s", $stripLicense);
                     $upd->execute();
                     $upd->close();
                 }
-                stats_day($SNLDBConnection, 'images_added', $success_count);
+                stats_day($CarpartsConnection, 'images_added', $success_count);
                 foreach ($saved_files as $fn) {
-                    photo_recent_add($SNLDBConnection, $stripLicense, $fn);
+                    photo_recent_add($CarpartsConnection, $stripLicense, $fn);
                 }
-                car_stats_log($SNLDBConnection, $stripLicense, 'edit');
-                car_changelog_log($SNLDBConnection, $stripLicense, 'photo');
-                mysqli_close($SNLDBConnection);
+                car_stats_log($CarpartsConnection, $stripLicense, 'edit');
+                car_changelog_log($CarpartsConnection, $stripLicense, 'photo');
+                mysqli_close($CarpartsConnection);
             }
         }
 

@@ -38,10 +38,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST')
 	$myLicense = isset($_POST['userLicense']) ? strtoupper(trim($_POST['userLicense'])) : '';
 
 	// SECURITY: Use prepared statement to prevent SQL injection
-	$stmt = $SNLDBConnection->prepare("SELECT License, Owner_display, Owner_show, Owner_history, Choise_Model, Milage, Choise_Status, Choise_Engine, Registration_date, Build_date, History, Mods, MA, VIN_Colorcode, Choise_Transmission, RECNO FROM SNLDB WHERE License = ?");
+	$stmt = $CarpartsConnection->prepare("SELECT License, Owner_display, Owner_show, Owner_history, Choise_Model, Milage, Choise_Status, Choise_Engine, Registration_date, Build_date, History, Mods, MA, VIN_Colorcode, Choise_Transmission, RECNO FROM SNLDB WHERE License = ?");
 
 	if (!$stmt) {
-		error_log("Prepare failed: " . $SNLDBConnection->error);
+		error_log("Prepare failed: " . $CarpartsConnection->error);
 		die("Database error occurred.");
 	}
 
@@ -199,7 +199,7 @@ History:<BR>
 	}
 
 	$stmt->close();
-	mysqli_close($SNLDBConnection);
+	mysqli_close($CarpartsConnection);
 
 } else
 {

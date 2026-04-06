@@ -11,7 +11,7 @@ if (!isset($_SESSION['csrf_token'])) {
 include 'connection.php';
 include_once 'makes_helper.php';
 
-makes_ensure_tables($SNLDBConnection);
+makes_ensure_tables($CarpartsConnection);
 
 $msg = '';
 
@@ -26,7 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($action === 'add_make') {
             $name = trim($_POST['make_name'] ?? '');
             if ($name !== '') {
-                $stmt = $SNLDBConnection->prepare("INSERT IGNORE INTO `CAR_MAKES` (`name`) VALUES (?)");
+                $stmt = $CarpartsConnection->prepare("INSERT IGNORE INTO `CAR_MAKES` (`name`) VALUES (?)");
                 $stmt->bind_param('s', $name);
                 $msg = $stmt->execute() && $stmt->affected_rows > 0
                      ? '<span style="color:green;">Make "' . htmlspecialchars($name) . '" added.</span>'
@@ -37,7 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif ($action === 'delete_make') {
             $make_id = intval($_POST['make_id'] ?? 0);
             if ($make_id > 0) {
-                $stmt = $SNLDBConnection->prepare("DELETE FROM `CAR_MAKES` WHERE `id` = ?");
+                $stmt = $CarpartsConnection->prepare("DELETE FROM `CAR_MAKES` WHERE `id` = ?");
                 $stmt->bind_param('i', $make_id);
                 $stmt->execute();
                 $msg = '<span style="color:green;">Make deleted (and its models).</span>';
@@ -50,7 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $year_from  = intval($_POST['year_from'] ?? 0) ?: null;
             $year_to    = intval($_POST['year_to']   ?? 0) ?: null;
             if ($make_id > 0 && $model_name !== '') {
-                $stmt = $SNLDBConnection->prepare(
+                $stmt = $CarpartsConnection->prepare(
                     "INSERT IGNORE INTO `CAR_MODELS` (`make_id`,`name`,`year_from`,`year_to`) VALUES (?,?,?,?)"
                 );
                 $stmt->bind_param('isii', $make_id, $model_name, $year_from, $year_to);
@@ -63,7 +63,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif ($action === 'delete_model') {
             $model_id = intval($_POST['model_id'] ?? 0);
             if ($model_id > 0) {
-                $stmt = $SNLDBConnection->prepare("DELETE FROM `CAR_MODELS` WHERE `id` = ?");
+                $stmt = $CarpartsConnection->prepare("DELETE FROM `CAR_MODELS` WHERE `id` = ?");
                 $stmt->bind_param('i', $model_id);
                 $stmt->execute();
                 $msg = '<span style="color:green;">Model deleted.</span>';
@@ -74,10 +74,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // ── Fetch data ────────────────────────────────────────────────────────────────
-$makes  = makes_list($SNLDBConnection);
+$makes  = makes_list($CarpartsConnection);
 $filter_make = isset($_GET['make']) ? intval($_GET['make']) : (int)(array_key_first($makes) ?? 0);
-$models = $filter_make > 0 ? makes_models_for($SNLDBConnection, $filter_make) : [];
-mysqli_close($SNLDBConnection);
+$models = $filter_make > 0 ? makes_models_for($CarpartsConnection, $filter_make) : [];
+mysqli_close($CarpartsConnection);
 ?>
 
 <div class="content-box">

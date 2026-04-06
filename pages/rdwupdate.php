@@ -60,7 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $new_status  = $statuses[$i]  ?? '';
         $new_history = trim($histories[$i] ?? '');
 
-        $stmt = $SNLDBConnection->prepare(
+        $stmt = $CarpartsConnection->prepare(
             "UPDATE SNLDB SET Choise_Status = ?, History = ?, moddate = ? WHERE RECNO = ?"
         );
         if (!$stmt) {
@@ -78,7 +78,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    mysqli_close($SNLDBConnection);
+    mysqli_close($CarpartsConnection);
 
     $ok_count  = count(array_filter($results, fn($r) => $r['status'] === 'ok'));
     $err_count = count(array_filter($results, fn($r) => $r['status'] === 'error'));
@@ -143,13 +143,13 @@ foreach ($rdw_all as $v) {
 // Load all DB supras
 include 'connection.php';
 $db_cars = [];
-$res = $SNLDBConnection->query(
+$res = $CarpartsConnection->query(
     "SELECT RECNO, License, Choise_Status, History FROM SNLDB ORDER BY License"
 );
 if ($res) {
     while ($row = $res->fetch_assoc()) $db_cars[] = $row;
 }
-mysqli_close($SNLDBConnection);
+mysqli_close($CarpartsConnection);
 
 // ─── Debug mode ───────────────────────────────────────────────────────────────
 if (!empty($_GET['debug'])) {

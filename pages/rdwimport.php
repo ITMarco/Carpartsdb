@@ -282,7 +282,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // Duplicate check — normalize both sides so dashes/spaces never cause a miss
         $license_stripped = preg_replace('/[^A-Z0-9]/', '', $license);
-        $chk = $SNLDBConnection->prepare(
+        $chk = $CarpartsConnection->prepare(
             "SELECT RECNO FROM SNLDB
              WHERE UPPER(REPLACE(REPLACE(License, '-', ''), ' ', '')) = ?
              LIMIT 1"
@@ -300,7 +300,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // Insert — 12 bound params (s×12)
         // Milage='', VIN_Number='No data', VIN_Modelcode='No data', Mods='No known modifications.', RECNO=NULL are literals
-        $stmt = $SNLDBConnection->prepare(
+        $stmt = $CarpartsConnection->prepare(
             "INSERT INTO SNLDB
              (License, Owner_display, Choise_Model, Choise_Engine, Choise_Transmission,
               Build_date, Registration_date, Milage, Choise_Status,
@@ -313,7 +313,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         );
 
         if (!$stmt) {
-            $results[] = ['license' => $license, 'status' => 'error', 'msg' => 'DB prepare fout: ' . $SNLDBConnection->error];
+            $results[] = ['license' => $license, 'status' => 'error', 'msg' => 'DB prepare fout: ' . $CarpartsConnection->error];
             continue;
         }
 
@@ -327,8 +327,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($stmt->execute()) {
             $stmt->close();
             include_once 'car_stats_helper.php';
-            stats_day($SNLDBConnection, 'supras_added');
-            car_changelog_log($SNLDBConnection, $license, 'new');
+            stats_day($CarpartsConnection, 'supras_added');
+            car_changelog_log($CarpartsConnection, $license, 'new');
 
             $folder = './cars/' . $license . '/slides/';
             if (!is_dir($folder)) {
@@ -342,7 +342,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    mysqli_close($SNLDBConnection);
+    mysqli_close($CarpartsConnection);
 
     $ok_count  = count(array_filter($results, fn($r) => $r['status'] === 'ok'));
     $dup_count = count(array_filter($results, fn($r) => $r['status'] === 'dup'));
@@ -407,7 +407,7 @@ $rdw_all = $rdw_result['data'];
 // Load all existing SNLDB licenses, normalized in SQL to remove dashes/spaces
 include 'connection.php';
 $existing = [];
-$res = $SNLDBConnection->query(
+$res = $CarpartsConnection->query(
     "SELECT UPPER(REPLACE(REPLACE(License, '-', ''), ' ', '')) AS k FROM SNLDB"
 );
 if ($res) {
@@ -433,7 +433,7 @@ usort($new_cars, function($a, $b) {
     return strcmp($da, $db);
 });
 
-mysqli_close($SNLDBConnection);
+mysqli_close($CarpartsConnection);
 
 $total_rdw = count($rdw_all);
 $total_new = count($new_cars);

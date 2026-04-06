@@ -6,13 +6,13 @@ if ($search_term !== '' && strlen($search_term) > 1) {
     if (!defined('SNLDBCARPARTS_ACCESS')) define('SNLDBCARPARTS_ACCESS', 1);
     include_once 'connection.php';
     include_once 'stats_helper.php';
-    stats_session_check($SNLDBConnection);
+    stats_session_check($CarpartsConnection);
 
     $is_admin = !empty($_SESSION['isadmin']) && $_SESSION['isadmin'] === 1;
 
     if ($is_admin) {
         $q    = $search_term;
-        $stmt = $SNLDBConnection->prepare(
+        $stmt = $CarpartsConnection->prepare(
             "SELECT *,
                     MATCH(License, Owner_display, VIN_Colorcode, Mods, History)
                     AGAINST (? IN BOOLEAN MODE) AS relevance
@@ -24,7 +24,7 @@ if ($search_term !== '' && strlen($search_term) > 1) {
         if ($stmt) { $stmt->bind_param('ss', $q, $q); }
     } else {
         $p    = '%' . $search_term . '%';
-        $stmt = $SNLDBConnection->prepare(
+        $stmt = $CarpartsConnection->prepare(
             "SELECT *, 0 AS relevance FROM SNLDB
              WHERE License LIKE ? OR Choise_Model LIKE ? OR Choise_Engine LIKE ?
                 OR VIN_Colorcode LIKE ? OR Mods LIKE ?
@@ -40,8 +40,8 @@ if ($search_term !== '' && strlen($search_term) > 1) {
         $stmt->close();
     }
 
-    $SNLDBConnection->query("UPDATE `16915snldb`.`HITS` SET `searches` = searches + 1 WHERE CONVERT(`HITS`.`key` USING utf8) = '1'");
-    stats_day($SNLDBConnection, 'searches');
+    $CarpartsConnection->query("UPDATE `16915snldb`.`HITS` SET `searches` = searches + 1 WHERE CONVERT(`HITS`.`key` USING utf8) = '1'");
+    stats_day($CarpartsConnection, 'searches');
 }
 
 $max_relevance = !empty($rows) ? (float)$rows[0]['relevance'] : 1.0;

@@ -19,7 +19,7 @@ include 'connection.php';
 include_once 'parts_helper.php';
 include_once 'stats_helper.php';
 
-parts_ensure_table($SNLDBConnection);
+parts_ensure_table($CarpartsConnection);
 
 // Collect and validate input
 $title       = trim($_POST['title'] ?? '');
@@ -40,24 +40,24 @@ $seller_id   = (int)$_SESSION['user_id'];
 
 if (empty($title)) {
     echo "<div class='content-box'><p style='color:red;'>Title is required.</p><p><a href='index.php?navigate=addpart'>Back</a></p></div>";
-    mysqli_close($SNLDBConnection);
+    mysqli_close($CarpartsConnection);
     return;
 }
 if ($make_id <= 0) {
     echo "<div class='content-box'><p style='color:red;'>Car make is required.</p><p><a href='index.php?navigate=addpart'>Back</a></p></div>";
-    mysqli_close($SNLDBConnection);
+    mysqli_close($CarpartsConnection);
     return;
 }
 if ($year_from < 1940 || $year_from > (int)date('Y') + 1) {
     echo "<div class='content-box'><p style='color:red;'>Valid year (from) is required.</p><p><a href='index.php?navigate=addpart'>Back</a></p></div>";
-    mysqli_close($SNLDBConnection);
+    mysqli_close($CarpartsConnection);
     return;
 }
 if ($year_to !== null && $year_to < $year_from) {
     $year_to = $year_from; // silently fix
 }
 
-$stmt = $SNLDBConnection->prepare(
+$stmt = $CarpartsConnection->prepare(
     "INSERT INTO `PARTS`
         (`seller_id`,`make_id`,`model_id`,`title`,`description`,`year_from`,`year_to`,
          `price`,`condition`,`stock`,`oem_number`,`replacement_number`,`visible`,`visible_private`,`for_sale`)
@@ -71,10 +71,10 @@ $stmt->bind_param(
 );
 
 if ($stmt->execute()) {
-    $new_id = $SNLDBConnection->insert_id;
-    stats_day($SNLDBConnection, 'parts_added');
+    $new_id = $CarpartsConnection->insert_id;
+    stats_day($CarpartsConnection, 'parts_added');
     $stmt->close();
-    mysqli_close($SNLDBConnection);
+    mysqli_close($CarpartsConnection);
 
     // Create the photo directory
     $dir = parts_photo_dir($new_id);
@@ -86,5 +86,5 @@ if ($stmt->execute()) {
     echo "<div class='content-box'><p style='color:red;'>Error saving part: "
          . htmlspecialchars($stmt->error) . "</p></div>";
     $stmt->close();
-    mysqli_close($SNLDBConnection);
+    mysqli_close($CarpartsConnection);
 }

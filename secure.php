@@ -40,10 +40,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST')
 		include 'connection.php';
 
 	// SECURITY: Use prepared statement to prevent SQL injection
-	$stmt = $SNLDBConnection->prepare("SELECT carlicense, password1, password2, userid, username FROM PASSWRDS WHERE carlicense = ?");
+	$stmt = $CarpartsConnection->prepare("SELECT carlicense, password1, password2, userid, username FROM PASSWRDS WHERE carlicense = ?");
 
 	if (!$stmt) {
-		error_log("Prepare failed: " . $SNLDBConnection->error);
+		error_log("Prepare failed: " . $CarpartsConnection->error);
 		die("Database error occurred.");
 	}
 
@@ -76,7 +76,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST')
 
 					// Automatically upgrade to hashed password
 					$hashed_password = password_hash($userpassword, PASSWORD_DEFAULT);
-					$update_stmt = $SNLDBConnection->prepare("UPDATE PASSWRDS SET password1 = ? WHERE carlicense = ?");
+					$update_stmt = $CarpartsConnection->prepare("UPDATE PASSWRDS SET password1 = ? WHERE carlicense = ?");
 					$update_stmt->bind_param("ss", $hashed_password, $mylicense);
 					$update_stmt->execute();
 					$update_stmt->close();
@@ -102,7 +102,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST')
 
 					// Automatically upgrade to hashed password
 					$hashed_password = password_hash($userpassword, PASSWORD_DEFAULT);
-					$update_stmt = $SNLDBConnection->prepare("UPDATE PASSWRDS SET password2 = ? WHERE carlicense = ?");
+					$update_stmt = $CarpartsConnection->prepare("UPDATE PASSWRDS SET password2 = ? WHERE carlicense = ?");
 					$update_stmt->bind_param("ss", $hashed_password, $mylicense);
 					$update_stmt->execute();
 					$update_stmt->close();
@@ -153,7 +153,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST')
 	}
 
 		$stmt->close();
-		mysqli_close($SNLDBConnection);
+		mysqli_close($CarpartsConnection);
 	} // End rate limiting check
 }
 

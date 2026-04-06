@@ -13,7 +13,7 @@ if (!isset($_SESSION['csrf_token'])) {
 include_once 'connection.php';
 
 // Auto-create table
-$SNLDBConnection->query("CREATE TABLE IF NOT EXISTS HOME_NEWS (
+$CarpartsConnection->query("CREATE TABLE IF NOT EXISTS HOME_NEWS (
     id         INT AUTO_INCREMENT PRIMARY KEY,
     title      VARCHAR(200)  NOT NULL,
     body       TEXT          NOT NULL,
@@ -42,7 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($title === '') {
                 $msg = 'Titel is verplicht.'; $msg_ok = false;
             } else {
-                $st = $SNLDBConnection->prepare(
+                $st = $CarpartsConnection->prepare(
                     "INSERT INTO HOME_NEWS (title, body, news_date, sort_order, visible) VALUES (?,?,?,?,1)"
                 );
                 $st->bind_param('sssi', $title, $body, $news_date, $sort_order);
@@ -60,7 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!$id || $title === '') {
                 $msg = 'Ongeldige invoer.'; $msg_ok = false;
             } else {
-                $st = $SNLDBConnection->prepare(
+                $st = $CarpartsConnection->prepare(
                     "UPDATE HOME_NEWS SET title=?, body=?, news_date=?, sort_order=? WHERE id=?"
                 );
                 $st->bind_param('sssii', $title, $body, $news_date, $sort_order, $id);
@@ -72,7 +72,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif ($action === 'delete') {
             $id = (int)($_POST['id'] ?? 0);
             if ($id) {
-                $st = $SNLDBConnection->prepare("DELETE FROM HOME_NEWS WHERE id=?");
+                $st = $CarpartsConnection->prepare("DELETE FROM HOME_NEWS WHERE id=?");
                 $st->bind_param('i', $id);
                 $st->execute();
                 $st->close();
@@ -82,7 +82,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif ($action === 'toggle') {
             $id = (int)($_POST['id'] ?? 0);
             if ($id) {
-                $st = $SNLDBConnection->prepare("UPDATE HOME_NEWS SET visible = 1 - visible WHERE id=?");
+                $st = $CarpartsConnection->prepare("UPDATE HOME_NEWS SET visible = 1 - visible WHERE id=?");
                 $st->bind_param('i', $id);
                 $st->execute();
                 $st->close();
@@ -95,7 +95,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // ── Edit mode: load item ──────────────────────────────────────────────────────
 if (isset($_GET['edit'])) {
     $edit_id = (int)$_GET['edit'];
-    $est = $SNLDBConnection->prepare("SELECT * FROM HOME_NEWS WHERE id=?");
+    $est = $CarpartsConnection->prepare("SELECT * FROM HOME_NEWS WHERE id=?");
     $est->bind_param('i', $edit_id);
     $est->execute();
     $edit_item = $est->get_result()->fetch_assoc();
@@ -104,7 +104,7 @@ if (isset($_GET['edit'])) {
 
 // ── Fetch all items ───────────────────────────────────────────────────────────
 $items = [];
-$res = $SNLDBConnection->query("SELECT * FROM HOME_NEWS ORDER BY sort_order DESC, news_date DESC");
+$res = $CarpartsConnection->query("SELECT * FROM HOME_NEWS ORDER BY sort_order DESC, news_date DESC");
 if ($res) while ($r = $res->fetch_assoc()) $items[] = $r;
 
 $fs = 'padding:6px 10px;font-size:13px;width:100%;box-sizing:border-box;

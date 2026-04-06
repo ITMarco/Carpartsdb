@@ -8,9 +8,9 @@ include_once 'car_stats_helper.php';
 include_once 'settings_helper.php';
 include_once 'comment_helper.php';
 
-if (empty($SNLDBConnection) || $SNLDBConnection->connect_error) {
+if (empty($CarpartsConnection) || $CarpartsConnection->connect_error) {
     echo "<div class='content-box'><h3>Fout</h3><p>Database verbinding mislukt."
-       . (isset($SNLDBConnection) ? ' ' . htmlspecialchars($SNLDBConnection->connect_error) : '') . "</p></div>";
+       . (isset($CarpartsConnection) ? ' ' . htmlspecialchars($CarpartsConnection->connect_error) : '') . "</p></div>";
     return;
 }
 
@@ -23,14 +23,14 @@ if ($kenteken === '') {
 // If input has no dashes and is pure alphanumeric, strip dashes from the DB column too
 $is_dashless = (strpos($kenteken, '-') === false && preg_match('/^[A-Z0-9]+$/i', $kenteken));
 if ($is_dashless) {
-    $stmt = $SNLDBConnection->prepare(
+    $stmt = $CarpartsConnection->prepare(
         "SELECT * FROM SNLDB WHERE REPLACE(REPLACE(License, '-', ''), ' ', '') LIKE ?"
     );
 } else {
-    $stmt = $SNLDBConnection->prepare("SELECT * FROM SNLDB WHERE License LIKE ?");
+    $stmt = $CarpartsConnection->prepare("SELECT * FROM SNLDB WHERE License LIKE ?");
 }
 if (!$stmt) {
-    error_log("includesearch prepare failed: " . $SNLDBConnection->error);
+    error_log("includesearch prepare failed: " . $CarpartsConnection->error);
     echo "<div class='content-box'><h3>Fout</h3><p>Database fout opgetreden.</p></div>";
     return;
 }
@@ -40,16 +40,16 @@ $stmt->execute();
 $result = $stmt->get_result();
 
 if ($result === false) {
-    echo "<div class='content-box'><h3>Fout</h3><p>Query mislukt: " . htmlspecialchars($SNLDBConnection->error) . "</p></div>";
+    echo "<div class='content-box'><h3>Fout</h3><p>Query mislukt: " . htmlspecialchars($CarpartsConnection->error) . "</p></div>";
     $stmt->close();
-    mysqli_close($SNLDBConnection);
+    mysqli_close($CarpartsConnection);
     return;
 }
 
-$SNLDBConnection->query("UPDATE `16915snldb`.`HITS` SET `searches` = searches + 1 WHERE CONVERT(`HITS`.`key` USING utf8) = '1'");
+$CarpartsConnection->query("UPDATE `16915snldb`.`HITS` SET `searches` = searches + 1 WHERE CONVERT(`HITS`.`key` USING utf8) = '1'");
 
 if ($result->num_rows > 0) {
-    car_stats_log($SNLDBConnection, strtoupper(trim($kenteken)));
+    car_stats_log($CarpartsConnection, strtoupper(trim($kenteken)));
 }
 
 if ($result->num_rows === 0) {
@@ -62,7 +62,7 @@ if ($result->num_rows === 0) {
        . "<button onclick=\"location.href='index.php?navigate=contribute&amp;kenteken=" . urlencode($kenteken) . "'\" class='btn' style='margin:6px 0;padding:8px 18px;font-size:13px;'>➕ Voeg de supra toe</button>"
        . "</center></div>";
     $stmt->close();
-    mysqli_close($SNLDBConnection);
+    mysqli_close($CarpartsConnection);
     return;
 }
 
@@ -238,7 +238,7 @@ while ($row = $result->fetch_assoc()):
     $Mods         = $row['Mods'];
     $ModDate      = $row['moddate'] ?? '';
 
-    $SNLDBConnection->query("UPDATE `16915snldb`.`HITS` SET `searchhits` = searchhits + 1 WHERE CONVERT(`HITS`.`key` USING utf8) = '1'");
+    $CarpartsConnection->query("UPDATE `16915snldb`.`HITS` SET `searchhits` = searchhits + 1 WHERE CONVERT(`HITS`.`key` USING utf8) = '1'");
 
     $stripLicense = strtoupper(preg_replace('/\s*/m', '', $License));
     $sl           = htmlspecialchars($stripLicense, ENT_QUOTES);
@@ -524,9 +524,9 @@ while ($row = $result->fetch_assoc()):
 
   <!-- ── Comments ──────────────────────────────────────────────────────────── -->
   <?php
-  $comments_on = settings_get($SNLDBConnection, 'comments_enabled', '1') === '1';
+  $comments_on = settings_get($CarpartsConnection, 'comments_enabled', '1') === '1';
   if ($comments_on):
-      $car_comments = comment_list($SNLDBConnection, $License);
+      $car_comments = comment_list($CarpartsConnection, $License);
       $comment_msg  = '';
 
       if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['snl_comment_submit'])
@@ -543,10 +543,10 @@ while ($row = $result->fetch_assoc()):
               } elseif (strlen($c_text) > 1000) {
                   $comment_msg = '<div style="color:orange;padding:6px 0;">Reactie is te lang (max 1000 tekens).</div>';
               } else {
-                  $result = comment_add($SNLDBConnection, $License, $c_author, $c_text, $c_ip);
+                  $result = comment_add($CarpartsConnection, $License, $c_author, $c_text, $c_ip);
                   if ($result === true) {
                       $comment_msg  = '<div style="color:green;padding:6px 0;">✓ Reactie geplaatst, bedankt!</div>';
-                      $car_comments = comment_list($SNLDBConnection, $License);
+                      $car_comments = comment_list($CarpartsConnection, $License);
                   } else {
                       $comment_msg = '<div style="color:red;padding:6px 0;">' . htmlspecialchars($result) . '</div>';
                   }
@@ -576,7 +576,7 @@ while ($row = $result->fetch_assoc()):
                   &nbsp;&mdash;&nbsp;<?= htmlspecialchars(substr($c['created_at'], 0, 16)) ?>
               </div>
               <div style="font-size:12px;color:var(--color-text);line-height:1.6;">
-                  <?= comment_render($c['comment'], settings_get($SNLDBConnection, 'comments_video_enabled', '1') === '1') ?>
+                  <?= comment_render($c['comment'], settings_get($CarpartsConnection, 'comments_video_enabled', '1') === '1') ?>
               </div>
           </div>
           <?php endforeach; ?>
@@ -614,5 +614,5 @@ while ($row = $result->fetch_assoc()):
 endwhile;
 
 $stmt->close();
-mysqli_close($SNLDBConnection);
+mysqli_close($CarpartsConnection);
 ?>
