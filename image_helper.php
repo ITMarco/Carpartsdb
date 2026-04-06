@@ -3,7 +3,7 @@ if (!defined('CARPARTS_ACCESS')) die('Direct access not permitted.');
 
 /**
  * Resize and compress an uploaded image to fit within $max_w x $max_h
- * and stay under $max_bytes. Always saves as JPEG.
+ * and stay under $max_bytes. Always saves as WebP.
  * Images smaller than the limits are kept at original dimensions.
  * Returns true on success, false on failure.
  */
@@ -33,20 +33,17 @@ function snldb_save_image($tmp_path, $target_path, $max_w = 1920, $max_h = 1280,
     imagecopyresampled($dst, $src, 0, 0, 0, 0, $new_w, $new_h, $orig_w, $orig_h);
     imagedestroy($src);
 
-    // Start at quality 85, reduce by 5 per step until under max_bytes or floor of 40
-    $quality = 85;
-    do {
-        imagejpeg($dst, $target_path, $quality);
-        $quality -= 5;
-    } while (filesize($target_path) > $max_bytes && $quality >= 40);
-
-    // Also save a WebP version alongside the JPEG (quality 82 is a good size/quality balance)
-    if (function_exists('imagewebp')) {
-        $webp_path = preg_replace('/\.(jpe?g|png|gif)$/i', '.webp', $target_path);
-        if ($webp_path !== $target_path) {
-            imagewebp($dst, $webp_path, 82);
-        }
+    if (!function_exists('imagewebp')) {
+        imagedestroy($dst);
+        return false;
     }
+
+    // Always save as WebP — start at quality 82, reduce until under max_bytes
+    $quality = 82;
+    do {
+        imagewebp($dst, $target_path, $quality);
+        $quality -= 5;
+    } while (file_exists($target_path) && filesize($target_path) > $max_bytes && $quality >= 40);
 
     imagedestroy($dst);
     return file_exists($target_path);

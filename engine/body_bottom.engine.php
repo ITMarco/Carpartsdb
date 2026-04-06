@@ -10,10 +10,11 @@
 <?php
 // Show logout link if authenticated, otherwise show admin login
 if (isset($_SESSION['authenticated']) && $_SESSION['authenticated'] === true) {
-    echo '<a href="index.php?navigate=adminpanel">Admin panel</a>';
-
-    // Show new-comment badge for admins
+    // Admin panel link — admins only
     if (!empty($_SESSION['isadmin']) && $_SESSION['isadmin'] === 1) {
+        echo '<a href="index.php?navigate=adminpanel">Admin panel</a>';
+
+        // New-comment badge for admins
         include_once 'settings_helper.php';
         include_once 'comment_helper.php';
         if (!isset($CarpartsConnection)) include_once 'connection.php';
@@ -38,9 +39,10 @@ if (isset($_SESSION['authenticated']) && $_SESSION['authenticated'] === true) {
                . intval($new_count) . ' nieuwe reactie' . ($new_count !== 1 ? 's' : '')
                . '</a>';
         }
+        echo ' | ';
     }
 
-    echo ' | <a href="index.php?navigate=logout">Logout</a>';
+    echo '<a href="index.php?navigate=logout">Logout</a>';
     if (isset($_SESSION['username'])) {
         echo ' (logged in as: ' . htmlspecialchars($_SESSION['username']) . ')';
     }
@@ -55,6 +57,44 @@ echo ' | <a href="index.php?navigate=privacyverklaring">Privacyverklaring</a>';
 <div style="height:80px;"></div>
 
 <?php
+// ── Seller unread-message notification bar ────────────────────────────────────
+if (!empty($_SESSION['authenticated']) && !empty($_SESSION['user_id'])) {
+    if (!defined('CARPARTS_ACCESS')) define('CARPARTS_ACCESS', 1);
+    include_once 'config.php';
+    if (!isset($CarpartsConnection)) {
+        $CarpartsConnection = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
+    }
+    if (!$CarpartsConnection->connect_error) {
+        $seller_uid = (int)$_SESSION['user_id'];
+        $unread_stmt = $CarpartsConnection->prepare(
+            "SELECT COUNT(*) FROM `PART_MESSAGES` pm
+             JOIN `PARTS` p ON p.`id` = pm.`part_id`
+             WHERE p.`seller_id` = ? AND pm.`read_at` IS NULL AND pm.`sender_id` != ?"
+        );
+        $unread_count = 0;
+        if ($unread_stmt) {
+            $unread_stmt->bind_param('ii', $seller_uid, $seller_uid);
+            $unread_stmt->execute();
+            $unread_stmt->bind_result($unread_count);
+            $unread_stmt->fetch();
+            $unread_stmt->close();
+        }
+        if ($unread_count > 0):
+?>
+<div id="msg-notify-bar"
+     style="position:fixed;bottom:0;left:0;right:0;z-index:9998;
+            background:#c87020;color:#fff;text-align:center;padding:10px 16px;
+            font-size:14px;font-weight:bold;cursor:pointer;box-shadow:0 -2px 8px rgba(0,0,0,0.25);"
+     onclick="location.href='index.php?navigate=mymessages'">
+    &#9993; You have <?= $unread_count ?> unread message<?= $unread_count !== 1 ? 's' : '' ?> &mdash; click to view
+    <span style="float:right;font-size:18px;font-weight:normal;line-height:1;"
+          onclick="event.stopPropagation();this.parentElement.style.display='none';">&#10005;</span>
+</div>
+<?php
+        endif;
+    }
+}
+
 // ── Theme picker widget ───────────────────────────────────────────────────────
 $_picker_themes  = $GLOBALS['_public_themes'] ?? [];
 $_active_user_id = $GLOBALS['_user_theme_id'] ?? 0;

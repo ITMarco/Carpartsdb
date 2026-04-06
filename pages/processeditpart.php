@@ -64,7 +64,7 @@ if (empty($title) || $make_id <= 0) {
 }
 
 // Auto-fill year from model if not provided
-if ($year_from < 1940 && $model_id) {
+if ($year_from < 1900 && $model_id) {
     $yr = $CarpartsConnection->prepare("SELECT `year_from`,`year_to` FROM `CAR_MODELS` WHERE `id`=? LIMIT 1");
     $yr->bind_param('i', $model_id);
     $yr->execute();
@@ -74,7 +74,7 @@ if ($year_from < 1940 && $model_id) {
     if ($mf) { $year_from = (int)$mf; }
     if (!$year_to && $mt) { $year_to = (int)$mt; }
 }
-if ($year_from < 1940) {
+if ($year_from < 1900) {
     $year_from = (int)date('Y');
 }
 if ($year_to !== null && $year_to < $year_from) {

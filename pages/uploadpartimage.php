@@ -59,13 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['photo'])) {
             if (!is_dir($dir) && !@mkdir($dir, 0755, true)) {
                 $upload_error = 'Could not create photo directory.';
             } else {
-                $ext   = match($mime) {
-                    'image/png'  => 'png',
-                    'image/gif'  => 'gif',
-                    'image/webp' => 'webp',
-                    default      => 'jpg',
-                };
-                $fname = $dir . '/' . uniqid('img_', true) . '.' . $ext;
+                        $fname = $dir . '/' . uniqid('img_', true) . '.webp';
                 include_once 'image_helper.php';
                 $result = snldb_save_image($_FILES['photo']['tmp_name'], $fname);
 

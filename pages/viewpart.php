@@ -4,6 +4,10 @@ include_once 'parts_helper.php';
 
 parts_ensure_table($CarpartsConnection);
 
+if (!isset($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
 $id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 if ($id <= 0) {
     mysqli_close($CarpartsConnection);
@@ -32,15 +36,39 @@ if (!$part) {
     return;
 }
 
+// Load messages
+$messages = [];
+$mq = $CarpartsConnection->prepare(
+    "SELECT pm.`id`, pm.`name`, pm.`email`, pm.`message`, pm.`created_at`,
+            u.`realname` AS sender_name
+     FROM `PART_MESSAGES` pm
+     LEFT JOIN `USERS` u ON u.`id` = pm.`sender_id`
+     WHERE pm.`part_id` = ?
+     ORDER BY pm.`created_at` ASC"
+);
+if ($mq) {
+    $mq->bind_param('i', $id);
+    $mq->execute();
+    $messages = $mq->get_result()->fetch_all(MYSQLI_ASSOC);
+    $mq->close();
+}
+
 $photos = parts_photos($id);
 $compat = parts_compat_get($CarpartsConnection, $id);
 mysqli_close($CarpartsConnection);
+
 $is_seller = isset($_SESSION['user_id']) && (int)$_SESSION['user_id'] === (int)$part['seller_id'];
 $can_edit  = $is_seller || !empty($_SESSION['isadmin']);
+$is_sold   = !empty($part['is_sold']);
 ?>
 
 <div class="content-box">
-<h3><?= htmlspecialchars($part['title']) ?></h3>
+<h3><?= htmlspecialchars($part['title']) ?>
+<?php if ($is_sold): ?>
+  <span style="display:inline-block;background:#c04040;color:#fff;font-size:13px;font-weight:normal;
+               padding:2px 10px;border-radius:3px;vertical-align:middle;margin-left:8px;">SOLD</span>
+<?php endif; ?>
+</h3>
 <small style="color:#888;"><?= htmlspecialchars(parts_ref($id)) ?></small>
 
 <div style="display:flex;gap:20px;flex-wrap:wrap;margin-top:14px;">
@@ -61,7 +89,7 @@ $can_edit  = $is_seller || !empty($_SESSION['isadmin']);
             <img src="<?= htmlspecialchars($ph) ?>" alt=""
                  style="width:60px;height:45px;object-fit:cover;cursor:pointer;
                         border-radius:3px;border:1px solid var(--color-content-border);"
-                 onclick="document.getElementById('main-photo').src=this.src;openLightbox(this.src)" />
+                 onclick="document.getElementById('main-photo').src=this.src;" />
             <?php endforeach; ?>
         </div>
         <?php endif; ?>
@@ -89,10 +117,15 @@ $can_edit  = $is_seller || !empty($_SESSION['isadmin']);
             <tr><td style="padding:5px 12px 5px 0;font-weight:bold;white-space:nowrap;">Price:</td>
                 <td style="padding:5px 0;font-size:20px;font-weight:bold;color:var(--color-accent);">
                     &euro;<?= number_format((float)$part['price'], 2, ',', '.') ?>
+                    <?php if ($is_sold): ?><span style="font-size:13px;color:#c04040;"> &mdash; sold</span><?php endif; ?>
                 </td></tr>
             <tr><td style="padding:5px 12px 5px 0;font-weight:bold;">Status:</td>
                 <td style="padding:5px 0;">
-                    <?= $part['for_sale'] ? 'For sale' : 'Display only' ?>
+                    <?php if ($is_sold): ?>
+                        <span style="color:#c04040;font-weight:bold;">Sold</span>
+                    <?php else: ?>
+                        <?= $part['for_sale'] ? 'For sale' : 'Display only' ?>
+                    <?php endif; ?>
                     <?php if (!$part['visible']): ?> <span style="color:#c04040;">(Private)</span><?php endif; ?>
                 </td></tr>
             <tr><td style="padding:5px 12px 5px 0;font-weight:bold;">Make:</td>
@@ -148,9 +181,18 @@ $can_edit  = $is_seller || !empty($_SESSION['isadmin']);
         <?php if ($can_edit): ?>
         <p style="margin-top:14px;">
             <a href="index.php?navigate=editpart&id=<?= $id ?>" class="btn" style="padding:6px 14px;">Edit</a>
+            <?php if (!$is_sold): ?>
+            <a href="index.php?navigate=markpartsold&id=<?= $id ?>"
+               style="padding:6px 14px;background:#c87020;color:#fff;text-decoration:none;border-radius:3px;margin-left:8px;font-size:13px;"
+               onclick="return confirm('Mark this part as sold? It will be hidden from public listings.');">Mark as sold</a>
+            <?php else: ?>
+            <a href="index.php?navigate=markpartsold&id=<?= $id ?>&undo=1"
+               style="padding:6px 14px;background:#5588bb;color:#fff;text-decoration:none;border-radius:3px;margin-left:8px;font-size:13px;"
+               onclick="return confirm('Re-list this part as available?');">Re-list</a>
+            <?php endif; ?>
             <a href="index.php?navigate=deletepart&id=<?= $id ?>"
                style="padding:6px 14px;background:#dc3545;color:#fff;text-decoration:none;border-radius:3px;margin-left:8px;font-size:13px;"
-               onclick="return confirm('Delete this part listing?');">Delete</a>
+               onclick="return confirm('Delete this part listing permanently?');">Delete</a>
         </p>
         <?php endif; ?>
     </div>
@@ -159,6 +201,68 @@ $can_edit  = $is_seller || !empty($_SESSION['isadmin']);
 <p style="margin-top:16px;">
     <a href="index.php?navigate=browse">&larr; Back to browse</a>
 </p>
+</div>
+
+<!-- Q&A / Messages section -->
+<div class="content-box">
+<h3>Questions &amp; messages</h3>
+
+<?php if (!empty($messages)): ?>
+<?php foreach ($messages as $msg): ?>
+<div style="border:1px solid var(--color-content-border);border-radius:4px;padding:10px 14px;margin-bottom:10px;background:var(--color-surface);">
+    <div style="font-size:12px;color:#888;margin-bottom:4px;">
+        <strong><?= htmlspecialchars($msg['sender_name'] ?: $msg['name'] ?: 'Anonymous') ?></strong>
+        &mdash; <?= htmlspecialchars(substr($msg['created_at'], 0, 16)) ?>
+    </div>
+    <div style="font-size:13px;line-height:1.5;"><?= nl2br(htmlspecialchars($msg['message'])) ?></div>
+    <?php if ($can_edit): ?>
+    <div style="margin-top:6px;">
+        <a href="index.php?navigate=processpartmessage&action=delete&id=<?= (int)$msg['id'] ?>&part_id=<?= $id ?>&csrf=<?= urlencode($_SESSION['csrf_token']) ?>"
+           style="font-size:11px;color:#c04040;"
+           onclick="return confirm('Delete this message?');">Delete</a>
+    </div>
+    <?php endif; ?>
+</div>
+<?php endforeach; ?>
+<?php else: ?>
+<p style="color:#888;font-size:13px;">No messages yet.</p>
+<?php endif; ?>
+
+<?php if (!$is_seller): ?>
+<h4 style="margin-top:16px;">Send a message to the seller</h4>
+<?php
+$msg_sent  = !empty($_GET['msg_sent']);
+$msg_error = $_GET['msg_error'] ?? '';
+if ($msg_sent): ?>
+<div style="background:#d4edda;border:1px solid #28a745;padding:10px;border-radius:4px;margin-bottom:12px;">
+    Message sent! The seller will get back to you.
+</div>
+<?php elseif ($msg_error): ?>
+<div style="color:red;margin-bottom:10px;"><?= htmlspecialchars($msg_error) ?></div>
+<?php endif; ?>
+
+<form method="post" action="index.php?navigate=processpartmessage">
+    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>" />
+    <input type="hidden" name="part_id"   value="<?= $id ?>" />
+    <?php if (empty($_SESSION['authenticated'])): ?>
+    <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:10px;">
+        <div>
+            <label style="font-size:12px;"><strong>Your name:</strong></label><br>
+            <input type="text" name="name" maxlength="80" required style="width:200px;padding:5px;" />
+        </div>
+        <div>
+            <label style="font-size:12px;"><strong>Your email:</strong></label><br>
+            <input type="email" name="email" maxlength="255" required style="width:220px;padding:5px;" />
+        </div>
+    </div>
+    <?php endif; ?>
+    <label style="font-size:12px;"><strong>Message / question / bid:</strong></label><br>
+    <textarea name="message" rows="4" required maxlength="2000"
+              style="width:100%;max-width:480px;padding:5px;margin-top:4px;"
+              placeholder="Ask a question, make an offer…"></textarea><br><br>
+    <input type="submit" value="Send message" class="btn" style="padding:7px 18px;" />
+</form>
+<?php endif; ?>
 </div>
 
 <!-- Lightbox -->

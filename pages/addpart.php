@@ -165,12 +165,12 @@ $pref_model = isset($_COOKIE['cpdb_last_model']) ? intval($_COOKIE['cpdb_last_mo
     <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start;">
         <div>
             <label><strong>Year from:</strong> <small style="color:#888;font-weight:normal;">auto-filled from model</small></label><br>
-            <input type="number" name="year_from" id="year_from" min="1940" max="<?= date('Y') + 1 ?>"
+            <input type="number" name="year_from" id="year_from" min="1900" max="2099"
                    style="width:100px;padding:5px;" placeholder="e.g. 1986" />
         </div>
         <div>
             <label><strong>Year to:</strong></label><br>
-            <input type="number" name="year_to" id="year_to" min="1940" max="<?= date('Y') + 1 ?>"
+            <input type="number" name="year_to" id="year_to" min="1900" max="2099"
                    style="width:100px;padding:5px;" placeholder="leave blank = ongoing" />
         </div>
     </div>

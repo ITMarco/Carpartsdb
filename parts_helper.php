@@ -90,6 +90,34 @@ function parts_ensure_table(mysqli $db): void {
         $db->query("ALTER TABLE `PARTS` ADD COLUMN `photo_dir` VARCHAR(100) NULL DEFAULT NULL AFTER `for_sale`");
     }
 
+    // is_sold — marks the part as sold; retains entry but hides from public search
+    $result = $db->query("SHOW COLUMNS FROM `PARTS` LIKE 'is_sold'");
+    if ($result && $result->num_rows === 0) {
+        $db->query("ALTER TABLE `PARTS` ADD COLUMN `is_sold` TINYINT(1) NOT NULL DEFAULT 0
+            COMMENT '1 = sold; hidden from public browse/search but record kept' AFTER `photo_dir`");
+    }
+
+    // PART_MESSAGES — questions / bids from buyers
+    $db->query("CREATE TABLE IF NOT EXISTS `PART_MESSAGES` (
+        `id`         INT           NOT NULL AUTO_INCREMENT,
+        `part_id`    INT           NOT NULL,
+        `sender_id`  INT           DEFAULT NULL COMMENT 'NULL = anonymous / not logged in',
+        `name`       VARCHAR(80)   NOT NULL DEFAULT '',
+        `email`      VARCHAR(255)  NOT NULL DEFAULT '',
+        `message`    TEXT          NOT NULL,
+        `created_at` TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        `read_at`    DATETIME      DEFAULT NULL COMMENT 'set when seller views the message',
+        PRIMARY KEY (`id`),
+        KEY `idx_part` (`part_id`),
+        CONSTRAINT `fk_msg_part` FOREIGN KEY (`part_id`) REFERENCES `PARTS` (`id`) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+    $r = $db->query("SHOW COLUMNS FROM `PART_MESSAGES` LIKE 'read_at'");
+    if ($r && $r->num_rows === 0) {
+        $db->query("ALTER TABLE `PART_MESSAGES` ADD COLUMN `read_at` DATETIME DEFAULT NULL
+            COMMENT 'set when seller views the message' AFTER `created_at`");
+    }
+
     // PART_COMPAT — additional make/model fitments for a part
     $db->query("CREATE TABLE IF NOT EXISTS `PART_COMPAT` (
         `id`       INT NOT NULL AUTO_INCREMENT,
@@ -123,7 +151,10 @@ function parts_find_dir(int $id): string {
         glob("parts/*-" . sprintf('%05d', $id)) ?: [],
         'is_dir'
     );
-    if (!empty($matches)) return (string)reset($matches);
+    if (!empty($matches)) {
+        rsort($matches); // newest date prefix first
+        return (string)$matches[0];
+    }
     return "parts/{$id}";
 }
 
@@ -236,7 +267,7 @@ function parts_get(mysqli $db, int $id, bool $include_hidden = false): ?array {
         "SELECT p.`id`, p.`seller_id`, p.`make_id`, p.`model_id`, p.`title`, p.`description`,
                 p.`year_from`, p.`year_to`, p.`price`, p.`condition`, p.`stock`,
                 p.`oem_number`, p.`replacement_number`, p.`visible`, p.`visible_private`,
-                p.`for_sale`, p.`photo_dir`, p.`created_at`, p.`updated_at`,
+                p.`for_sale`, p.`photo_dir`, p.`is_sold`, p.`created_at`, p.`updated_at`,
                 m.`name` AS make_name, mo.`name` AS model_name,
                 u.`email` AS seller_email, u.`realname` AS seller_name
          FROM `PARTS` p

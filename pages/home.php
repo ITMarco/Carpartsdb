@@ -52,14 +52,16 @@ if ($cq) while ($cr = $cq->fetch_assoc()) {
     $cond_counts[(int)$cr['condition']] = (int)$cr['cnt'];
 }
 
-// Recent parts (last 6)
+// Recent parts (last 6, excluding sold)
 $rq = $CarpartsConnection->query(
     "SELECT p.`id`, p.`title`, p.`price`, p.`condition`, p.`year_from`, p.`year_to`, p.`created_at`,
-            m.`name` AS make_name, mo.`name` AS model_name
+            m.`name` AS make_name, mo.`name` AS model_name,
+            u.`realname` AS seller_name, u.`email` AS seller_email
      FROM `PARTS` p
      JOIN `CAR_MAKES` m ON m.`id` = p.`make_id`
      LEFT JOIN `CAR_MODELS` mo ON mo.`id` = p.`model_id`
-     WHERE p.`visible` = 1
+     LEFT JOIN `USERS` u ON u.`id` = p.`seller_id`
+     WHERE p.`visible` = 1 AND COALESCE(p.`is_sold`,0) = 0
      ORDER BY p.`created_at` DESC LIMIT 6"
 );
 if ($rq) while ($rr = $rq->fetch_assoc()) $recent_parts[] = $rr;
@@ -168,6 +170,7 @@ if ($nq) while ($nr = $nq->fetch_assoc()) $news_items[] = $nr;
     <td style="padding:6px 8px;width:70px;"></td>
     <td style="padding:6px 10px;">Part</td>
     <td style="padding:6px 10px;">Make / Model</td>
+    <td style="padding:6px 10px;">Seller</td>
     <td style="padding:6px 10px;">Condition</td>
     <td style="padding:6px 10px;text-align:right;">Price</td>
 </tr>
@@ -196,6 +199,9 @@ if ($nq) while ($nr = $nq->fetch_assoc()) $news_items[] = $nr;
     <td style="padding:5px 10px;">
         <?= htmlspecialchars($rp['make_name']) ?>
         <?= $rp['model_name'] ? '<br><small style="color:#888;">' . htmlspecialchars($rp['model_name']) . '</small>' : '' ?>
+    </td>
+    <td style="padding:5px 10px;font-size:12px;">
+        <?= htmlspecialchars($rp['seller_name'] ?: $rp['seller_email'] ?: '') ?>
     </td>
     <td style="padding:5px 10px;"><?= htmlspecialchars(parts_condition_label((int)$rp['condition'])) ?></td>
     <td style="padding:5px 10px;text-align:right;font-weight:bold;">

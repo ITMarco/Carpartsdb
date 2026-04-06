@@ -20,7 +20,7 @@ $offset       = ($page - 1) * $per_page;
 $is_member = !empty($_SESSION['is_member']) || !empty($_SESSION['isadmin']);
 
 // ── Build query ───────────────────────────────────────────────────────────────
-$where  = ["p.`visible` = 1"];
+$where  = ["p.`visible` = 1", "COALESCE(p.`is_sold`,0) = 0"];
 $params = [];
 $types  = '';
 
@@ -142,7 +142,7 @@ function browse_url(array $overrides = []): string {
         <div>
             <label style="font-size:12px;">Year</label><br>
             <input type="number" name="year" value="<?= $filter_year ?: '' ?>"
-                   min="1945" max="<?= date('Y') ?>" placeholder="e.g. 1992"
+                   min="1900" max="2099" placeholder="e.g. 1992"
                    style="width:86px;padding:5px;" />
         </div>
         <div>

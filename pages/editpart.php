@@ -77,12 +77,12 @@ mysqli_close($CarpartsConnection);
     <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start;">
         <div>
             <label><strong>Year from:</strong> <small style="color:#888;font-weight:normal;">auto-filled from model</small></label><br>
-            <input type="number" name="year_from" id="year_from" min="1940" max="<?= date('Y') + 1 ?>"
+            <input type="number" name="year_from" id="year_from" min="1900" max="2099"
                    style="width:100px;padding:5px;" value="<?= (int)$part['year_from'] ?>" />
         </div>
         <div>
             <label><strong>Year to:</strong></label><br>
-            <input type="number" name="year_to" id="year_to" min="1940" max="<?= date('Y') + 1 ?>"
+            <input type="number" name="year_to" id="year_to" min="1900" max="2099"
                    style="width:100px;padding:5px;"
                    value="<?= $part['year_to'] ? (int)$part['year_to'] : '' ?>" />
         </div>
@@ -154,6 +154,22 @@ mysqli_close($CarpartsConnection);
     <input type="submit" value="Save changes" class="btn" style="padding:9px 24px;" />
     <a href="index.php?navigate=viewpart&id=<?= $id ?>" style="padding:9px 18px;margin-left:10px;">Cancel</a>
 </form>
+
+<div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--color-content-border);display:flex;gap:10px;flex-wrap:wrap;">
+    <?php $is_sold = !empty($part['is_sold']); ?>
+    <?php if (!$is_sold): ?>
+    <a href="index.php?navigate=markpartsold&id=<?= $id ?>"
+       style="padding:7px 16px;background:#c87020;color:#fff;text-decoration:none;border-radius:3px;font-size:13px;"
+       onclick="return confirm('Mark this part as sold? It will be hidden from public listings.');">Mark as sold</a>
+    <?php else: ?>
+    <a href="index.php?navigate=markpartsold&id=<?= $id ?>&undo=1"
+       style="padding:7px 16px;background:#5588bb;color:#fff;text-decoration:none;border-radius:3px;font-size:13px;"
+       onclick="return confirm('Re-list this part as available?');">Re-list (undo sold)</a>
+    <?php endif; ?>
+    <a href="index.php?navigate=deletepart&id=<?= $id ?>"
+       style="padding:7px 16px;background:#dc3545;color:#fff;text-decoration:none;border-radius:3px;font-size:13px;"
+       onclick="return confirm('Permanently delete this part listing?');">Delete</a>
+</div>
 </div>
 
 <script>
