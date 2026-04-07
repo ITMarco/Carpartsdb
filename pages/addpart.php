@@ -50,12 +50,15 @@ if ($new_id > 0 && $new_part) {
 </div>
 
 <div id="upload-progress" style="margin-top:10px;font-size:12px;"></div>
-<div id="photo-grid" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;">
-    <?php foreach ($photos as $ph): ?>
-    <img src="<?= htmlspecialchars($ph) ?>" alt=""
-         style="width:100px;height:75px;object-fit:cover;border-radius:4px;
-                border:1px solid var(--color-content-border);" />
-    <?php endforeach; ?>
+<div id="photo-grid-wrap" style="margin-top:12px;<?= empty($photos) ? 'display:none;' : '' ?>">
+    <p style="font-weight:bold;color:#2a7a2a;margin:0 0 6px;">&#10003; Successfully uploaded pictures:</p>
+    <div id="photo-grid" style="display:flex;flex-wrap:wrap;gap:8px;">
+        <?php foreach ($photos as $ph): ?>
+        <img src="<?= htmlspecialchars($ph) ?>" alt=""
+             style="width:100px;height:75px;object-fit:cover;border-radius:4px;
+                    border:1px solid var(--color-content-border);" />
+        <?php endforeach; ?>
+    </div>
 </div>
 
 <p style="margin-top:16px;">
@@ -71,6 +74,7 @@ if ($new_id > 0 && $new_part) {
     var zone    = document.getElementById('drop-zone');
     var input   = document.getElementById('photo-input');
     var prog    = document.getElementById('upload-progress');
+    var wrap    = document.getElementById('photo-grid-wrap');
     var grid    = document.getElementById('photo-grid');
 
     zone.addEventListener('click',   function() { input.click(); });
@@ -106,6 +110,7 @@ if ($new_id > 0 && $new_part) {
                 img.src = d.path + '?t=' + Date.now();
                 img.style.cssText = 'width:100px;height:75px;object-fit:cover;border-radius:4px;border:1px solid var(--color-content-border);';
                 grid.appendChild(img);
+                wrap.style.display = '';
             } else {
                 row.textContent = '✗ ' + file.name + ': ' + (d.error || 'Upload failed');
                 row.style.color = '#c04040';
@@ -122,8 +127,15 @@ if ($new_id > 0 && $new_part) {
     return; // Don't show the add-part form below
 }
 
+include_once 'users_helper.php';
+users_ensure_table($CarpartsConnection);
+
 $makes       = makes_list($CarpartsConnection);
 $models_json = makes_all_models_json($CarpartsConnection);
+
+// Top 5 make/model combos this user has used before
+$top_models = users_get_top_models($CarpartsConnection, (int)$_SESSION['user_id'], 5);
+
 mysqli_close($CarpartsConnection);
 
 // Last-used make/model from cookie
@@ -141,6 +153,26 @@ $pref_model = isset($_COOKIE['cpdb_last_model']) ? intval($_COOKIE['cpdb_last_mo
     <label><strong>Title / part name: *</strong></label><br>
     <input type="text" name="title" maxlength="255" required style="width:380px;padding:5px;"
            placeholder="e.g. Front bumper, alternator, door mirror…" /><br><br>
+
+    <?php if (!empty($top_models)): ?>
+    <div style="margin-bottom:14px;">
+        <label style="font-size:12px;color:#888;font-weight:bold;letter-spacing:.5px;text-transform:uppercase;">Quick select:</label><br>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:5px;">
+        <?php foreach ($top_models as $tm):
+            $label = htmlspecialchars($tm['make_name']);
+            if ($tm['model_name']) $label .= ' &mdash; ' . htmlspecialchars($tm['model_name']);
+        ?>
+        <button type="button"
+                onclick="quickSelect(<?= (int)$tm['make_id'] ?>, <?= (int)$tm['model_id'] ?>)"
+                style="padding:5px 12px;font-size:12px;background:var(--color-input-bg);
+                       color:var(--color-text);border:1px solid var(--color-content-border);
+                       border-radius:4px;cursor:pointer;">
+            <?= $label ?>
+        </button>
+        <?php endforeach; ?>
+        </div>
+    </div>
+    <?php endif; ?>
 
     <div style="display:flex;gap:20px;flex-wrap:wrap;">
         <div>
@@ -178,9 +210,9 @@ $pref_model = isset($_COOKIE['cpdb_last_model']) ? intval($_COOKIE['cpdb_last_mo
 
     <div style="display:flex;gap:20px;flex-wrap:wrap;">
         <div>
-            <label><strong>Price (€): *</strong></label><br>
-            <input type="number" name="price" required min="0" step="0.01"
-                   style="width:120px;padding:5px;" placeholder="0.00" />
+            <label><strong>Price (€):</strong> <small style="color:#888;font-weight:normal;">leave blank = price on request</small></label><br>
+            <input type="number" name="price" min="0" step="0.01"
+                   style="width:120px;padding:5px;" placeholder="on request" />
         </div>
         <div>
             <label><strong>Condition: *</strong> <small style="color:#666;">(0 = rubbish, 5 = mint)</small></label><br>
@@ -373,6 +405,25 @@ function refreshCompatData() {
 }
 
 document.getElementById('addpart-form').addEventListener('submit', refreshCompatData);
+
+// ── Quick-select from recent history ──────────────────────────────────────────
+function quickSelect(makeId, modelId) {
+    var makeEl = document.getElementById('make_id');
+    makeEl.value = makeId;
+    saveMakePref();
+    updateModels('make_id', 'model_id', 'year_from', 'year_to');
+    if (modelId > 0) {
+        var modelEl = document.getElementById('model_id');
+        for (var i = 0; i < modelEl.options.length; i++) {
+            if (parseInt(modelEl.options[i].value) === modelId) {
+                modelEl.selectedIndex = i;
+                saveModelPref();
+                fillYears('model_id', 'year_from', 'year_to');
+                break;
+            }
+        }
+    }
+}
 
 // Pre-populate model dropdown from cookie preference on page load
 if (_prefMake > 0) {

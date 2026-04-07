@@ -46,7 +46,8 @@ $make_id     = intval($_POST['make_id'] ?? 0);
 $model_id    = intval($_POST['model_id'] ?? 0) ?: null;
 $year_from   = intval($_POST['year_from'] ?? 0);
 $year_to     = intval($_POST['year_to'] ?? 0) ?: null;
-$price       = round(floatval($_POST['price'] ?? 0), 2);
+$price_raw   = trim($_POST['price'] ?? '');
+$price       = ($price_raw !== '') ? round(floatval($price_raw), 2) : null;
 $condition   = max(0, min(5, intval($_POST['condition'] ?? 3)));
 $stock       = max(1, intval($_POST['stock'] ?? 1));
 $oem         = trim($_POST['oem_number'] ?? '') ?: null;
@@ -89,7 +90,7 @@ $stmt = $CarpartsConnection->prepare(
      WHERE `id`=?"
 );
 $stmt->bind_param(
-    'iissiidiissiiii',
+    'iissiiidissiiii',
     $make_id, $model_id, $title, $description,
     $year_from, $year_to, $price, $condition, $stock,
     $oem, $replacement, $visible, $visible_prv, $for_sale, $id

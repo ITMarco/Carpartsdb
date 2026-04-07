@@ -177,6 +177,7 @@ if (!empty($_picker_themes)):
 </div>
 
 <script>
+var _snlLoggedIn = <?= !empty($_SESSION['authenticated']) ? 'true' : 'false' ?>;
 document.getElementById('snl-picker-btn').addEventListener('click', function(e) {
     e.stopPropagation();
     document.getElementById('snl-picker-panel').classList.toggle('open');
@@ -189,11 +190,17 @@ function snlSetTheme(id) {
     var isDark = item ? item.dataset.isDark : '0';
     document.cookie = 'snldb_theme=' + id + '; path=/; max-age=' + (365*24*3600) + '; SameSite=Lax';
     document.cookie = 'snldb_theme_dark=' + isDark + '; path=/; max-age=' + (365*24*3600) + '; SameSite=Lax';
+    if (_snlLoggedIn) {
+        fetch('index.php?navigate=savetheme&ajax=1&theme_id=' + id).catch(function(){});
+    }
     location.reload();
 }
 function snlResetTheme() {
     document.cookie = 'snldb_theme=; path=/; max-age=0; SameSite=Lax';
     document.cookie = 'snldb_theme_dark=; path=/; max-age=0; SameSite=Lax';
+    if (_snlLoggedIn) {
+        fetch('index.php?navigate=savetheme&ajax=1&theme_id=0').catch(function(){});
+    }
     location.reload();
 }
 </script>

@@ -228,7 +228,7 @@ updateModels();
     <td style="padding:4px 8px;white-space:nowrap;"><?= (int)$p['year_from'] ?><?= $p['year_to'] ? '&ndash;' . (int)$p['year_to'] : '' ?></td>
     <td style="padding:4px 8px;"><?= (int)$p['condition'] ?>/5</td>
     <td style="padding:4px 8px;"><?= (int)$p['stock'] ?></td>
-    <td style="padding:4px 8px;text-align:right;font-weight:bold;">&euro;<?= number_format((float)$p['price'], 2, ',', '.') ?></td>
+    <td style="padding:4px 8px;text-align:right;font-weight:bold;"><?= $p['price'] !== null ? '&euro;' . number_format((float)$p['price'], 2, ',', '.') : '<span style="color:#888;font-weight:normal;font-size:11px;">On request</span>' ?></td>
 </tr>
 <?php endforeach; ?>
 </table>

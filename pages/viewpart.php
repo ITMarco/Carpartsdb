@@ -116,7 +116,9 @@ $is_sold   = !empty($part['is_sold']);
         <table style="border-collapse:collapse;font-size:13px;width:100%;">
             <tr><td style="padding:5px 12px 5px 0;font-weight:bold;white-space:nowrap;">Price:</td>
                 <td style="padding:5px 0;font-size:20px;font-weight:bold;color:var(--color-accent);">
+                    <?php if ($part['price'] !== null): ?>
                     &euro;<?= number_format((float)$part['price'], 2, ',', '.') ?>
+                    <?php else: ?><span style="font-size:14px;color:#888;font-weight:normal;">Price on request</span><?php endif; ?>
                     <?php if ($is_sold): ?><span style="font-size:13px;color:#c04040;"> &mdash; sold</span><?php endif; ?>
                 </td></tr>
             <tr><td style="padding:5px 12px 5px 0;font-weight:bold;">Status:</td>

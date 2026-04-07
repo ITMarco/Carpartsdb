@@ -150,7 +150,7 @@ $recent_msgs = $CarpartsConnection->query(
   <td style="padding:3px 8px;white-space:nowrap;color:#7a9ab0;"><?= htmlspecialchars(date('d-m-Y', strtotime($row['created_at']))) ?></td>
   <td style="padding:3px 8px;"><a href="index.php?navigate=viewpart&id=<?= (int)$row['id'] ?>"><?= htmlspecialchars($row['title']) ?></a></td>
   <td style="padding:3px 8px;"><?= htmlspecialchars($row['make_name']) ?></td>
-  <td style="padding:3px 8px;text-align:right;">&euro;<?= number_format((float)$row['price'], 2) ?></td>
+  <td style="padding:3px 8px;text-align:right;"><?= $row['price'] !== null ? '&euro;' . number_format((float)$row['price'], 2) : '<span style="color:#888;font-size:11px;">–</span>' ?></td>
   <td style="padding:3px 8px;"><?= htmlspecialchars($row['seller_name']) ?></td>
   <td style="padding:3px 8px;">
     <?php if ($row['is_sold']): ?>

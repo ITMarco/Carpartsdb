@@ -17,6 +17,7 @@ if (!isset($_POST['csrf_token'], $_SESSION['csrf_token'])
 
 include 'connection.php';
 include_once 'parts_helper.php';
+include_once 'users_helper.php';
 include_once 'stats_helper.php';
 
 parts_ensure_table($CarpartsConnection);
@@ -27,7 +28,8 @@ $make_id     = intval($_POST['make_id'] ?? 0);
 $model_id    = intval($_POST['model_id'] ?? 0) ?: null;
 $year_from   = intval($_POST['year_from'] ?? 0);
 $year_to     = intval($_POST['year_to'] ?? 0) ?: null;
-$price       = round(floatval($_POST['price'] ?? 0), 2);
+$price_raw   = trim($_POST['price'] ?? '');
+$price       = ($price_raw !== '') ? round(floatval($price_raw), 2) : null;
 $condition   = max(0, min(5, intval($_POST['condition'] ?? 3)));
 $stock       = max(1, intval($_POST['stock'] ?? 1));
 $oem         = trim($_POST['oem_number'] ?? '') ?: null;
@@ -73,8 +75,9 @@ $stmt = $CarpartsConnection->prepare(
          `price`,`condition`,`stock`,`oem_number`,`replacement_number`,`visible`,`visible_private`,`for_sale`)
      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
 );
+// price can be NULL — use 'd' type (mysqli sends NULL correctly for null float)
 $stmt->bind_param(
-    'iiissiidiissiii',
+    'iiissiiidissiii',
     $seller_id, $make_id, $model_id, $title, $description,
     $year_from, $year_to, $price, $condition, $stock,
     $oem, $replacement, $visible, $visible_prv, $for_sale
@@ -101,6 +104,10 @@ if ($stmt->execute()) {
     if (is_array($compat_arr) && !empty($compat_arr)) {
         parts_compat_save($CarpartsConnection, $new_id, $compat_arr);
     }
+
+    // Record make/model choice for quick-select history
+    users_ensure_table($CarpartsConnection);
+    users_record_model_pref($CarpartsConnection, $seller_id, $make_id, $model_id);
 
     mysqli_close($CarpartsConnection);
 

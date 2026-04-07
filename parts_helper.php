@@ -118,6 +118,12 @@ function parts_ensure_table(mysqli $db): void {
             COMMENT 'set when seller views the message' AFTER `created_at`");
     }
 
+    // Allow price to be NULL (optional — "price on request")
+    $r = $db->query("SHOW COLUMNS FROM `PARTS` LIKE 'price'");
+    if ($r && ($col = $r->fetch_assoc()) && $col['Null'] === 'NO') {
+        $db->query("ALTER TABLE `PARTS` MODIFY COLUMN `price` DECIMAL(10,2) NULL DEFAULT NULL");
+    }
+
     // PART_COMPAT — additional make/model fitments for a part
     $db->query("CREATE TABLE IF NOT EXISTS `PART_COMPAT` (
         `id`       INT NOT NULL AUTO_INCREMENT,

@@ -91,10 +91,10 @@ mysqli_close($CarpartsConnection);
 
     <div style="display:flex;gap:20px;flex-wrap:wrap;">
         <div>
-            <label><strong>Price (€): *</strong></label><br>
-            <input type="number" name="price" required min="0" step="0.01"
-                   style="width:120px;padding:5px;"
-                   value="<?= number_format((float)$part['price'], 2, '.', '') ?>" />
+            <label><strong>Price (€):</strong> <small style="color:#888;font-weight:normal;">leave blank = price on request</small></label><br>
+            <input type="number" name="price" min="0" step="0.01"
+                   style="width:120px;padding:5px;" placeholder="on request"
+                   value="<?= $part['price'] !== null ? number_format((float)$part['price'], 2, '.', '') : '' ?>" />
         </div>
         <div>
             <label><strong>Condition:</strong></label><br>

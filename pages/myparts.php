@@ -75,7 +75,7 @@ mysqli_close($CarpartsConnection);
     <td style="padding:4px 8px;white-space:nowrap;"><?= (int)$p['year_from'] ?><?= $p['year_to'] ? '&ndash;' . (int)$p['year_to'] : '' ?></td>
     <td style="padding:4px 8px;"><?= (int)$p['condition'] ?>/5</td>
     <td style="padding:4px 8px;"><?= (int)$p['stock'] ?></td>
-    <td style="padding:4px 8px;text-align:right;">&euro;<?= number_format((float)$p['price'], 2, ',', '.') ?></td>
+    <td style="padding:4px 8px;text-align:right;"><?= $p['price'] !== null ? '&euro;' . number_format((float)$p['price'], 2, ',', '.') : '<span style="color:#888;font-size:11px;">On request</span>' ?></td>
     <td style="padding:4px 8px;white-space:nowrap;">
         <a href="index.php?navigate=editpart&id=<?= (int)$p['id'] ?>">Edit</a>
     </td>

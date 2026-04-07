@@ -46,6 +46,8 @@ $allowed_pages = [
     'adminpanel', 'adminmakes',
     'insertuser', 'processinsertuser', 'edituser', 'processedituser',
     'themeadmin', 'ipwhitelist', 'commentadmin', 'homenews', 'carstats',
+    // User preferences (AJAX)
+    'savetheme',
 ];
 
 // AJAX requests bypass the page layout so they can return pure JSON

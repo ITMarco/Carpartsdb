@@ -205,7 +205,7 @@ if ($nq) while ($nr = $nq->fetch_assoc()) $news_items[] = $nr;
     </td>
     <td style="padding:5px 10px;"><?= htmlspecialchars(parts_condition_label((int)$rp['condition'])) ?></td>
     <td style="padding:5px 10px;text-align:right;font-weight:bold;">
-        &euro;<?= number_format((float)$rp['price'], 2, ',', '.') ?>
+        <?= $rp['price'] !== null ? '&euro;' . number_format((float)$rp['price'], 2, ',', '.') : '<span style="color:#888;font-size:11px;">On request</span>' ?>
     </td>
 </tr>
 <?php endforeach; ?>
