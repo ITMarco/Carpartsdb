@@ -53,6 +53,11 @@ if ($mq) {
     $mq->close();
 }
 
+// Increment view counter — skip for the seller and admins
+if (!$is_seller && empty($_SESSION['isadmin'])) {
+    $CarpartsConnection->query("UPDATE `PARTS` SET `view_count` = `view_count` + 1 WHERE `id` = {$id}");
+}
+
 $photos = parts_photos($id);
 $compat = parts_compat_get($CarpartsConnection, $id);
 mysqli_close($CarpartsConnection);
@@ -156,7 +161,13 @@ $is_sold   = !empty($part['is_sold']);
             <?php endif; ?>
             <tr><td style="padding:5px 12px 5px 0;font-weight:bold;">Seller:</td>
                 <td style="padding:5px 0;">
-                    <?= htmlspecialchars($part['seller_name'] ?: $part['seller_email']) ?>
+                    <?php if (!empty($_SESSION['authenticated'])): ?>
+                    <a href="index.php?navigate=userprofile&id=<?= (int)$part['seller_id'] ?>">
+                        <?= htmlspecialchars($part['seller_name'] ?: $part['seller_email']) ?>
+                    </a>
+                    <?php else: ?>
+                    <?= htmlspecialchars($part['seller_name'] ?: 'Member') ?>
+                    <?php endif; ?>
                 </td></tr>
             <tr><td style="padding:5px 12px 5px 0;font-weight:bold;">Listed:</td>
                 <td style="padding:5px 0;font-size:12px;color:#888;">
@@ -178,6 +189,16 @@ $is_sold   = !empty($part['is_sold']);
             </li>
             <?php endforeach; ?>
         </ul>
+        <?php endif; ?>
+
+        <?php if (!$is_seller && !$is_sold): ?>
+        <p style="margin-top:14px;">
+            <a href="#qa-section"
+               onclick="document.getElementById('msg-message').value='Hi, I am interested in your <?= htmlspecialchars(addslashes(parts_ref($id))) ?> — <?= htmlspecialchars(addslashes($part['title'])) ?>.\n\n';document.getElementById('qa-section').scrollIntoView({behavior:'smooth'});document.getElementById('msg-message').focus();return false;"
+               class="btn" style="padding:6px 14px;">
+                &#9993; Contact seller
+            </a>
+        </p>
         <?php endif; ?>
 
         <?php if ($can_edit): ?>
@@ -202,11 +223,16 @@ $is_sold   = !empty($part['is_sold']);
 
 <p style="margin-top:16px;">
     <a href="index.php?navigate=browse">&larr; Back to browse</a>
+    <?php if (!empty($_SESSION['authenticated']) && !$is_seller): ?>
+    &nbsp;&nbsp;
+    <a href="index.php?navigate=flagpart&id=<?= $id ?>"
+       style="font-size:11px;color:#aaa;" title="Report this listing">&#9873; Report</a>
+    <?php endif; ?>
 </p>
 </div>
 
 <!-- Q&A / Messages section -->
-<div class="content-box">
+<div class="content-box" id="qa-section">
 <h3>Questions &amp; messages</h3>
 
 <?php if (!empty($messages)): ?>
@@ -259,7 +285,7 @@ if ($msg_sent): ?>
     </div>
     <?php endif; ?>
     <label style="font-size:12px;"><strong>Message / question / bid:</strong></label><br>
-    <textarea name="message" rows="4" required maxlength="2000"
+    <textarea name="message" id="msg-message" rows="4" required maxlength="2000"
               style="width:100%;max-width:480px;padding:5px;margin-top:4px;"
               placeholder="Ask a question, make an offer…"></textarea><br><br>
     <input type="submit" value="Send message" class="btn" style="padding:7px 18px;" />

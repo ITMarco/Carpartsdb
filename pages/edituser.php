@@ -18,7 +18,16 @@ users_ensure_table($CarpartsConnection);
 $selected_id = isset($_POST['userid']) ? intval($_POST['userid']) : 0;
 
 if ($selected_id > 0) {
-    $user = users_get_by_id($CarpartsConnection, $selected_id);
+    // Fetch full row including confirmation status
+    $ustmt = $CarpartsConnection->prepare(
+        "SELECT `id`,`email`,`realname`,`isadmin`,`is_member`,
+                COALESCE(`is_confirmed`,1) AS `is_confirmed`, `created_at`
+         FROM `USERS` WHERE `id` = ? LIMIT 1"
+    );
+    $ustmt->bind_param('i', $selected_id);
+    $ustmt->execute();
+    $user = $ustmt->get_result()->fetch_assoc();
+    $ustmt->close();
 
     if ($user):
 ?>
@@ -40,7 +49,32 @@ function confirmDelete() {
     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>" />
     <input type="hidden" name="userid" value="<?= (int)$user['id'] ?>" />
 
-    <p><strong>User ID:</strong> <?= (int)$user['id'] ?></p>
+    <p><strong>User ID:</strong> <?= (int)$user['id'] ?> &nbsp;&nbsp;
+    <strong>Registered:</strong> <?= htmlspecialchars(substr($user['created_at'], 0, 10)) ?> &nbsp;&nbsp;
+    <strong>Status:</strong>
+    <?php if ($user['is_confirmed']): ?>
+        <span style="color:#2a7a2a;font-weight:bold;">&#10003; Confirmed</span>
+    <?php else: ?>
+        <span style="color:#c87020;font-weight:bold;">&#9888; Pending confirmation</span>
+        &nbsp;
+        <form method="post" action="index.php?navigate=processedituser" style="display:inline;">
+            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>" />
+            <input type="hidden" name="userid" value="<?= (int)$user['id'] ?>" />
+            <button type="submit" name="action" value="Confirm"
+                    style="padding:2px 10px;font-size:12px;background:#2a7a2a;color:#fff;border:none;cursor:pointer;">
+                Confirm now
+            </button>
+        </form>
+        <form method="post" action="index.php?navigate=processedituser" style="display:inline;margin-left:4px;">
+            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>" />
+            <input type="hidden" name="userid" value="<?= (int)$user['id'] ?>" />
+            <button type="submit" name="action" value="Resend"
+                    style="padding:2px 10px;font-size:12px;background:#5588bb;color:#fff;border:none;cursor:pointer;">
+                Resend email
+            </button>
+        </form>
+    <?php endif; ?>
+    </p>
 
     <label for="email"><strong>Email address:</strong></label><br>
     <input type="email" id="email" name="email" maxlength="255" required
@@ -82,30 +116,95 @@ function confirmDelete() {
     endif;
 
 } else {
-    // Show user selection list
+    // Show user list with enrollment status
     $result = $CarpartsConnection->query(
-        "SELECT `id`,`email`,`realname`,`isadmin`,`is_member` FROM `USERS` ORDER BY `email` ASC"
+        "SELECT `id`,`email`,`realname`,`isadmin`,`is_member`,
+                COALESCE(`is_confirmed`,1) AS `is_confirmed`,
+                `created_at`
+         FROM `USERS` ORDER BY `is_confirmed` ASC, `created_at` DESC"
     );
+    $flash = $_GET['msg'] ?? '';
 ?>
-<h4>Select a user to edit:</h4>
-<form method="post" action="index.php?navigate=edituser">
-    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>" />
-    <select name="userid" required style="width:420px;padding:5px;font-size:14px;">
-        <option value="">-- Select user --</option>
-        <?php while ($row = $result->fetch_assoc()): ?>
-        <option value="<?= (int)$row['id'] ?>">
-            <?= htmlspecialchars($row['email']) ?>
-            <?= $row['realname'] ? ' — ' . htmlspecialchars($row['realname']) : '' ?>
-            <?= $row['isadmin'] ? ' [ADMIN]' : '' ?>
-            <?= $row['is_member'] ? ' [MEMBER]' : '' ?>
-        </option>
-        <?php endwhile; ?>
-    </select>
-    <br><br>
-    <input type="submit" value="Edit" class="btn" style="padding:8px 18px;" />
+<?php if ($flash): ?>
+<div style="background:#d4edda;border:1px solid #28a745;color:#155724;padding:10px 14px;
+            border-radius:4px;margin-bottom:14px;font-size:13px;"><?= htmlspecialchars($flash) ?></div>
+<?php endif; ?>
+<h4 style="margin-bottom:10px;">Users</h4>
+<table style="width:100%;border-collapse:collapse;font-size:13px;">
+<tr style="background:var(--color-nav-hover-bg);">
+    <th style="padding:6px 10px;text-align:left;">Email</th>
+    <th style="padding:6px 10px;text-align:left;">Name</th>
+    <th style="padding:6px 10px;text-align:center;">Status</th>
+    <th style="padding:6px 10px;text-align:center;">Role</th>
+    <th style="padding:6px 10px;text-align:left;">Registered</th>
+    <th style="padding:6px 10px;text-align:center;">Actions</th>
+</tr>
+<?php $i=1; while ($row = $result->fetch_assoc()):
+    $confirmed = (int)$row['is_confirmed'];
+    $bg = $i % 2 ? 'var(--color-input-bg)' : 'var(--color-surface)';
+?>
+<tr style="background:<?= $bg ?>;border-top:1px solid var(--color-nav-border);">
+    <td style="padding:6px 10px;"><?= htmlspecialchars($row['email']) ?></td>
+    <td style="padding:6px 10px;color:#666;"><?= htmlspecialchars($row['realname'] ?? '') ?></td>
+    <td style="padding:6px 10px;text-align:center;">
+        <?php if ($confirmed): ?>
+        <span style="color:#2a7a2a;font-weight:bold;font-size:12px;">&#10003; Confirmed</span>
+        <?php else: ?>
+        <span style="color:#c87020;font-weight:bold;font-size:12px;">&#9888; Pending</span>
+        <?php endif; ?>
+    </td>
+    <td style="padding:6px 10px;text-align:center;font-size:11px;">
+        <?= $row['isadmin']   ? '<span style="color:#c04040;font-weight:bold;">ADMIN</span> ' : '' ?>
+        <?= $row['is_member'] ? '<span style="color:#448;font-weight:bold;">MEMBER</span>' : '' ?>
+        <?= (!$row['isadmin'] && !$row['is_member']) ? '<span style="color:#999;">User</span>' : '' ?>
+    </td>
+    <td style="padding:6px 10px;color:#888;font-size:12px;"><?= htmlspecialchars(substr($row['created_at'], 0, 10)) ?></td>
+    <td style="padding:6px 10px;text-align:center;white-space:nowrap;">
+        <!-- Edit -->
+        <form method="post" action="index.php?navigate=edituser" style="display:inline;">
+            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>" />
+            <input type="hidden" name="userid" value="<?= (int)$row['id'] ?>" />
+            <button type="submit" style="padding:3px 10px;font-size:12px;cursor:pointer;">Edit</button>
+        </form>
+        <?php if (!$confirmed): ?>
+        <!-- Confirm by hand -->
+        <form method="post" action="index.php?navigate=processedituser" style="display:inline;">
+            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>" />
+            <input type="hidden" name="userid" value="<?= (int)$row['id'] ?>" />
+            <button type="submit" name="action" value="Confirm"
+                    style="padding:3px 10px;font-size:12px;cursor:pointer;background:#2a7a2a;color:#fff;border:none;">
+                Confirm
+            </button>
+        </form>
+        <!-- Resend email -->
+        <form method="post" action="index.php?navigate=processedituser" style="display:inline;">
+            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>" />
+            <input type="hidden" name="userid" value="<?= (int)$row['id'] ?>" />
+            <button type="submit" name="action" value="Resend"
+                    style="padding:3px 10px;font-size:12px;cursor:pointer;background:#5588bb;color:#fff;border:none;">
+                Resend email
+            </button>
+        </form>
+        <!-- Delete unconfirmed -->
+        <form method="post" action="index.php?navigate=processedituser" style="display:inline;"
+              onsubmit="return confirm('Delete this unconfirmed user?');">
+            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>" />
+            <input type="hidden" name="userid" value="<?= (int)$row['id'] ?>" />
+            <button type="submit" name="action" value="Delete"
+                    style="padding:3px 10px;font-size:12px;cursor:pointer;background:#dc3545;color:#fff;border:none;">
+                Delete
+            </button>
+        </form>
+        <?php endif; ?>
+    </td>
+</tr>
+<?php $i++; endwhile; ?>
+</table>
+<p style="margin-top:16px;">
+    <a href="index.php?navigate=insertuser" class="btn" style="padding:7px 18px;">+ Add user</a>
     <button type="button" onclick="location.href='index.php?navigate=adminpanel'"
-            style="padding:8px 18px;margin-left:10px;">Back to admin panel</button>
-</form>
+            style="padding:7px 18px;margin-left:10px;">Back to admin panel</button>
+</p>
 <?php } ?>
 
 <?php mysqli_close($CarpartsConnection); ?>

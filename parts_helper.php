@@ -118,11 +118,31 @@ function parts_ensure_table(mysqli $db): void {
             COMMENT 'set when seller views the message' AFTER `created_at`");
     }
 
+    // View counter
+    $r = $db->query("SHOW COLUMNS FROM `PARTS` LIKE 'view_count'");
+    if ($r && $r->num_rows === 0) {
+        $db->query("ALTER TABLE `PARTS` ADD COLUMN `view_count` INT NOT NULL DEFAULT 0 AFTER `is_sold`");
+    }
+
     // Allow price to be NULL (optional — "price on request")
     $r = $db->query("SHOW COLUMNS FROM `PARTS` LIKE 'price'");
     if ($r && ($col = $r->fetch_assoc()) && $col['Null'] === 'NO') {
         $db->query("ALTER TABLE `PARTS` MODIFY COLUMN `price` DECIMAL(10,2) NULL DEFAULT NULL");
     }
+
+    // PART_FLAGS — abuse/spam reports
+    $db->query("CREATE TABLE IF NOT EXISTS `PART_FLAGS` (
+        `id`         INT          NOT NULL AUTO_INCREMENT,
+        `part_id`    INT          NOT NULL,
+        `reporter_id` INT         DEFAULT NULL COMMENT 'NULL = anonymous (should not happen — UI requires login)',
+        `reason`     VARCHAR(255) NOT NULL DEFAULT '',
+        `created_at` TIMESTAMP   NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        `resolved`   TINYINT(1)  NOT NULL DEFAULT 0,
+        PRIMARY KEY (`id`),
+        KEY `idx_part`     (`part_id`),
+        KEY `idx_resolved` (`resolved`),
+        CONSTRAINT `fk_flag_part` FOREIGN KEY (`part_id`) REFERENCES `PARTS` (`id`) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
     // PART_COMPAT — additional make/model fitments for a part
     $db->query("CREATE TABLE IF NOT EXISTS `PART_COMPAT` (
@@ -273,7 +293,7 @@ function parts_get(mysqli $db, int $id, bool $include_hidden = false): ?array {
         "SELECT p.`id`, p.`seller_id`, p.`make_id`, p.`model_id`, p.`title`, p.`description`,
                 p.`year_from`, p.`year_to`, p.`price`, p.`condition`, p.`stock`,
                 p.`oem_number`, p.`replacement_number`, p.`visible`, p.`visible_private`,
-                p.`for_sale`, p.`photo_dir`, p.`is_sold`, p.`created_at`, p.`updated_at`,
+                p.`for_sale`, p.`photo_dir`, p.`is_sold`, p.`view_count`, p.`created_at`, p.`updated_at`,
                 m.`name` AS make_name, mo.`name` AS model_name,
                 u.`email` AS seller_email, u.`realname` AS seller_name
          FROM `PARTS` p

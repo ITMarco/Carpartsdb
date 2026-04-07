@@ -20,6 +20,7 @@ if (!isset($_POST['csrf_token'], $_SESSION['csrf_token'])
 
 include 'connection.php';
 include_once 'users_helper.php';
+include_once 'settings_helper.php';
 users_ensure_table($CarpartsConnection);
 
 $userid = isset($_POST['userid']) ? intval($_POST['userid']) : 0;
@@ -32,12 +33,57 @@ if ($userid <= 0) {
     return;
 }
 
-if ($action === 'Delete') {
+if ($action === 'Confirm') {
+    users_confirm($CarpartsConnection, $userid);
+    mysqli_close($CarpartsConnection);
+    header('Location: index.php?navigate=edituser&msg=' . urlencode('User confirmed successfully.'));
+    exit();
+
+} elseif ($action === 'Resend') {
+    // Fetch the user to get email/name and regenerate token
+    $u = users_get_by_id($CarpartsConnection, $userid);
+    if (!$u) {
+        echo "<div style='color:red;'>User not found.</div><p><a href='index.php?navigate=edituser'>Back</a></p></div>";
+        mysqli_close($CarpartsConnection);
+        return;
+    }
+    $token = bin2hex(random_bytes(32));
+    $upd = $CarpartsConnection->prepare("UPDATE `USERS` SET `confirmation_token`=?, `is_confirmed`=0 WHERE `id`=?");
+    $upd->bind_param('si', $token, $userid);
+    $upd->execute();
+    $upd->close();
+
+    $scheme      = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $host        = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    $base        = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? '/'), '/\\');
+    $confirm_url = "{$scheme}://{$host}{$base}/index.php?navigate=confirmemail&token=" . urlencode($token);
+    $site_name   = settings_get($CarpartsConnection, 'site_name', 'Car Parts DB');
+    $mail_from   = settings_get($CarpartsConnection, 'mail_from',  'noreply@supraclub.nl');
+
+    $subject = "Confirm your {$site_name} account";
+    $body    = "Hi " . ($u['realname'] ?: $u['email']) . ",\r\n\r\n"
+             . "An admin has resent your confirmation link for {$site_name}:\r\n\r\n"
+             . "{$confirm_url}\r\n\r\n"
+             . "— {$site_name}";
+    $headers = implode("\r\n", [
+        "From: {$site_name} <{$mail_from}>",
+        'MIME-Version: 1.0',
+        'Content-Type: text/plain; charset=UTF-8',
+    ]);
+    mail($u['email'], $subject, $body, $headers);
+
+    mysqli_close($CarpartsConnection);
+    header('Location: index.php?navigate=edituser&msg=' . urlencode('Confirmation email resent to ' . $u['email'] . '.'));
+    exit();
+
+} elseif ($action === 'Delete') {
     $stmt = $CarpartsConnection->prepare("DELETE FROM `USERS` WHERE `id` = ?");
     $stmt->bind_param('i', $userid);
     if ($stmt->execute()) {
-        echo "<div style='background:#d4edda;border:1px solid #28a745;padding:12px;border-radius:4px;'>";
-        echo "<strong>User deleted successfully.</strong></div>";
+        $stmt->close();
+        mysqli_close($CarpartsConnection);
+        header('Location: index.php?navigate=edituser&msg=' . urlencode('User deleted.'));
+        exit();
     } else {
         echo "<div style='color:red;'>Error deleting user: " . htmlspecialchars($stmt->error) . "</div>";
     }

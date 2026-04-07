@@ -46,6 +46,17 @@ function users_ensure_table(mysqli $db): void {
                 COMMENT 'set on self-signup, cleared on confirm' AFTER `is_confirmed`");
     }
 
+    // Profile fields
+    $r = $db->query("SHOW COLUMNS FROM `USERS` LIKE 'phone'");
+    if ($r && $r->num_rows === 0) {
+        $db->query("ALTER TABLE `USERS`
+            ADD COLUMN `phone`                   VARCHAR(40)  NULL DEFAULT NULL AFTER `is_confirmed`,
+            ADD COLUMN `address`                 VARCHAR(255) NULL DEFAULT NULL AFTER `phone`,
+            ADD COLUMN `bio`                     TEXT         NULL DEFAULT NULL AFTER `address`,
+            ADD COLUMN `show_contact_to_members` TINYINT(1)   NOT NULL DEFAULT 0
+                COMMENT '1 = non-incrowd logged-in users can see phone/address' AFTER `bio`");
+    }
+
     // Per-user theme preference
     $r = $db->query("SHOW COLUMNS FROM `USERS` LIKE 'theme_id'");
     if ($r && $r->num_rows === 0) {

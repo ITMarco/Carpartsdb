@@ -156,21 +156,18 @@ $pref_model = isset($_COOKIE['cpdb_last_model']) ? intval($_COOKIE['cpdb_last_mo
 
     <?php if (!empty($top_models)): ?>
     <div style="margin-bottom:14px;">
-        <label style="font-size:12px;color:#888;font-weight:bold;letter-spacing:.5px;text-transform:uppercase;">Quick select:</label><br>
-        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:5px;">
-        <?php foreach ($top_models as $tm):
-            $label = htmlspecialchars($tm['make_name']);
-            if ($tm['model_name']) $label .= ' &mdash; ' . htmlspecialchars($tm['model_name']);
-        ?>
-        <button type="button"
-                onclick="quickSelect(<?= (int)$tm['make_id'] ?>, <?= (int)$tm['model_id'] ?>)"
-                style="padding:5px 12px;font-size:12px;background:var(--color-input-bg);
-                       color:var(--color-text);border:1px solid var(--color-content-border);
-                       border-radius:4px;cursor:pointer;">
-            <?= $label ?>
-        </button>
-        <?php endforeach; ?>
-        </div>
+        <label><strong>Quick select:</strong> <small style="color:#888;font-weight:normal;">your recently used make/model</small></label><br>
+        <select onchange="if(this.value){var p=JSON.parse(this.value);quickSelect(p[0],p[1]);this.selectedIndex=0;}"
+                style="padding:5px;min-width:260px;">
+            <option value="">-- Select recent make/model --</option>
+            <?php foreach ($top_models as $tm):
+                $label = $tm['make_name'];
+                if ($tm['model_name']) $label .= ' — ' . $tm['model_name'];
+                $val = json_encode([(int)$tm['make_id'], (int)$tm['model_id']]);
+            ?>
+            <option value="<?= htmlspecialchars($val) ?>"><?= htmlspecialchars($label) ?></option>
+            <?php endforeach; ?>
+        </select>
     </div>
     <?php endif; ?>
 

@@ -42,9 +42,10 @@ if (isset($_SESSION['authenticated']) && $_SESSION['authenticated'] === true) {
         echo ' | ';
     }
 
-    echo '<a href="index.php?navigate=logout">Logout</a>';
+    echo '<a href="index.php?navigate=userprofile&id=' . (int)($_SESSION['user_id'] ?? 0) . '">My profile</a>';
+    echo ' | <a href="index.php?navigate=logout">Logout</a>';
     if (isset($_SESSION['username'])) {
-        echo ' (logged in as: ' . htmlspecialchars($_SESSION['username']) . ')';
+        echo ' (' . htmlspecialchars($_SESSION['username']) . ')';
     }
 } else {
     echo '<a href="index.php?navigate=secureadmin">Login</a>';

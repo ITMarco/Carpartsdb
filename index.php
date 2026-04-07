@@ -33,7 +33,7 @@ function getOnlineUsers() {
 // Helper/shared files (rdwu_functions.php, connection.php, etc.) must NOT be added.
 $allowed_pages = [
     // Public
-    'home', 'browse', 'viewpart', 'about', 'address', 'privacyverklaring',
+    'home', 'browse', 'viewpart', 'address', 'privacyverklaring',
     // Self-signup & email confirmation
     'signup', 'processsignup', 'confirmemail', 'resendemail',
     // Authenticated users (sellers)
@@ -48,6 +48,14 @@ $allowed_pages = [
     'themeadmin', 'ipwhitelist', 'commentadmin', 'homenews', 'carstats',
     // User preferences (AJAX)
     'savetheme',
+    // User profiles
+    'userprofile', 'edituserprofile',
+    // Bulk part actions
+    'processbulkparts',
+    // Reporting
+    'flagpart', 'flagadmin',
+    // Admin export
+    'exportparts',
 ];
 
 // AJAX requests bypass the page layout so they can return pure JSON

@@ -8,11 +8,12 @@ parts_ensure_table($CarpartsConnection);
 stats_day($CarpartsConnection, 'searches');
 
 // ── Filters ───────────────────────────────────────────────────────────────────
-$filter_make  = isset($_GET['make'])  ? intval($_GET['make'])  : 0;
-$filter_model = isset($_GET['model']) ? intval($_GET['model']) : 0;
-$filter_year  = isset($_GET['year'])  ? intval($_GET['year'])  : 0;
-$filter_cond  = isset($_GET['cond'])  ? intval($_GET['cond'])  : -1;
-$filter_q     = isset($_GET['q'])     ? trim($_GET['q'])       : '';
+$filter_make   = isset($_GET['make'])   ? intval($_GET['make'])   : 0;
+$filter_model  = isset($_GET['model'])  ? intval($_GET['model'])  : 0;
+$filter_year   = isset($_GET['year'])   ? intval($_GET['year'])   : 0;
+$filter_cond   = isset($_GET['cond'])   ? intval($_GET['cond'])   : -1;
+$filter_q      = isset($_GET['q'])      ? trim($_GET['q'])        : '';
+$filter_seller = isset($_GET['seller']) ? intval($_GET['seller']) : 0;
 $page         = max(1, isset($_GET['pg']) ? intval($_GET['pg']) : 1);
 $per_page     = 20;
 $offset       = ($page - 1) * $per_page;
@@ -55,6 +56,11 @@ if ($filter_q !== '') {
     $params[] = $like;
     $params[] = $like;
     $types   .= 'sss';
+}
+if ($filter_seller > 0) {
+    $where[]  = "p.`seller_id` = ?";
+    $params[] = $filter_seller;
+    $types   .= 'i';
 }
 
 $where_sql = implode(' AND ', $where);
@@ -100,14 +106,15 @@ $models_json = makes_all_models_json($CarpartsConnection);
 mysqli_close($CarpartsConnection);
 
 function browse_url(array $overrides = []): string {
-    global $filter_make, $filter_model, $filter_year, $filter_cond, $filter_q;
+    global $filter_make, $filter_model, $filter_year, $filter_cond, $filter_q, $filter_seller;
     $current = array_filter([
         'navigate' => 'browse',
-        'make'     => $filter_make  ?: null,
-        'model'    => $filter_model ?: null,
-        'year'     => $filter_year  ?: null,
+        'make'     => $filter_make   ?: null,
+        'model'    => $filter_model  ?: null,
+        'year'     => $filter_year   ?: null,
         'cond'     => $filter_cond >= 0 ? $filter_cond : null,
         'q'        => $filter_q !== '' ? $filter_q : null,
+        'seller'   => $filter_seller ?: null,
     ], fn($v) => $v !== null);
     return 'index.php?' . http_build_query(array_merge($current, $overrides));
 }
@@ -181,6 +188,11 @@ function updateModels() {
 updateModels();
 </script>
 
+<?php if ($filter_seller > 0): ?>
+<p style="font-size:12px;color:#888;margin-bottom:6px;">
+    Showing listings by one seller. <a href="index.php?navigate=browse">Show all</a>
+</p>
+<?php endif; ?>
 <p style="font-size:12px;color:#666;"><?= number_format($total_rows) ?> part(s) found.</p>
 
 <?php if (empty($parts)): ?>

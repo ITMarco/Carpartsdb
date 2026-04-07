@@ -33,7 +33,30 @@ if (!isset($_SESSION['isadmin']) || $_SESSION['isadmin'] !== 1) {
             <h2>Statistics:</h2>
             <ul>
                 <li><a href="index.php?navigate=carstats">View statistics</a></li>
+                <li><a href="index.php?navigate=exportparts">Export parts to CSV</a></li>
                 <li><a href="index.php?navigate=ipwhitelist">IP whitelist</a></li>
+            </ul>
+
+            <?php
+            if (!defined('CARPARTS_ACCESS')) define('CARPARTS_ACCESS', 1);
+            if (!isset($CarpartsConnection)) { include_once 'config.php'; include_once 'connection.php'; }
+            include_once 'parts_helper.php';
+            parts_ensure_table($CarpartsConnection);
+            $fr = $CarpartsConnection->query("SELECT COUNT(*) FROM `PART_FLAGS` WHERE `resolved`=0");
+            $flag_count = $fr ? (int)$fr->fetch_row()[0] : 0;
+            ?>
+            <h2>Moderation:</h2>
+            <ul>
+                <li>
+                    <a href="index.php?navigate=flagadmin">Reported listings</a>
+                    <?php if ($flag_count > 0): ?>
+                    <span style="display:inline-block;background:#c04040;color:#fff;border-radius:10px;
+                                 padding:1px 8px;font-size:11px;font-weight:bold;margin-left:4px;">
+                        <?= $flag_count ?>
+                    </span>
+                    <?php endif; ?>
+                </li>
+                <li><a href="index.php?navigate=commentadmin">Comment moderation</a></li>
             </ul>
 
             <h2>Appearance:</h2>
@@ -44,7 +67,6 @@ if (!isset($_SESSION['isadmin']) || $_SESSION['isadmin'] !== 1) {
             <h2>Content:</h2>
             <ul>
                 <li><a href="index.php?navigate=homenews">Home page news items</a></li>
-                <li><a href="index.php?navigate=commentadmin">Comment moderation</a></li>
             </ul>
         </div>
 
