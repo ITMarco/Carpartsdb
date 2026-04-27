@@ -47,7 +47,7 @@ $allowed_pages = [
     'insertuser', 'processinsertuser', 'edituser', 'processedituser',
     'themeadmin', 'ipwhitelist', 'commentadmin', 'homenews', 'carstats',
     // User preferences (AJAX)
-    'savetheme', 'savebrowseview',
+    'savetheme', 'savebrowseview', 'inlineeditpart',
     // User profiles
     'userprofile', 'edituserprofile',
     // Bulk part actions

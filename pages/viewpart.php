@@ -60,11 +60,30 @@ if (!$is_seller && empty($_SESSION['isadmin'])) {
 
 $photos = parts_photos($id);
 $compat = parts_compat_get($CarpartsConnection, $id);
+
+// Related parts — same make, different part, visible, not sold, max 4
+$related = [];
+$rq = $CarpartsConnection->prepare(
+    "SELECT p.`id`, p.`title`, p.`price`, m.`name` AS make_name, mo.`name` AS model_name
+     FROM `PARTS` p
+     JOIN `CAR_MAKES` m ON m.`id` = p.`make_id`
+     LEFT JOIN `CAR_MODELS` mo ON mo.`id` = p.`model_id`
+     WHERE p.`make_id` = ? AND p.`id` != ? AND p.`visible` = 1 AND COALESCE(p.`is_sold`,0) = 0
+     ORDER BY p.`created_at` DESC LIMIT 4"
+);
+if ($rq) {
+    $rq->bind_param('ii', $part['make_id'], $id);
+    $rq->execute();
+    $related = $rq->get_result()->fetch_all(MYSQLI_ASSOC);
+    $rq->close();
+}
+
 mysqli_close($CarpartsConnection);
 
 $is_seller = isset($_SESSION['user_id']) && (int)$_SESSION['user_id'] === (int)$part['seller_id'];
 $can_edit  = $is_seller || !empty($_SESSION['isadmin']);
 $is_sold   = !empty($part['is_sold']);
+$csrf      = htmlspecialchars($_SESSION['csrf_token']);
 ?>
 
 <div class="content-box">
@@ -89,7 +108,7 @@ $is_sold   = !empty($part['is_sold']);
                  onclick="openLightbox(this.src)" />
         </div>
         <?php if (count($photos) > 1): ?>
-        <div style="display:flex;flex-wrap:wrap;gap:5px;">
+        <div id="thumb-strip" style="display:flex;flex-wrap:wrap;gap:5px;">
             <?php foreach ($photos as $ph): ?>
             <img src="<?= htmlspecialchars($ph) ?>" alt=""
                  style="width:60px;height:45px;object-fit:cover;cursor:pointer;
@@ -107,26 +126,57 @@ $is_sold   = !empty($part['is_sold']);
         <?php endif; ?>
 
         <?php if ($can_edit): ?>
-        <p style="margin-top:8px;font-size:12px;">
-            <a href="index.php?navigate=uploadpartimage&id=<?= $id ?>">+ Upload photo</a>
+        <!-- Inline photo upload -->
+        <div style="margin-top:12px;">
+            <div id="vp-drop-zone"
+                 style="border:2px dashed var(--color-content-border);border-radius:6px;
+                        padding:14px 10px;text-align:center;cursor:pointer;
+                        background:var(--color-surface);transition:background .15s;">
+                <div style="font-size:22px;margin-bottom:4px;">&#128247;</div>
+                <div style="font-size:12px;color:var(--color-accent);margin-bottom:8px;">
+                    Drop photos here or choose:
+                </div>
+                <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;">
+                    <button type="button" onclick="document.getElementById('vp-file-gallery').click()"
+                            style="padding:5px 12px;font-size:12px;border-radius:3px;cursor:pointer;border:1px solid var(--color-content-border);">
+                        &#128193; Gallery
+                    </button>
+                    <button type="button" onclick="document.getElementById('vp-file-camera').click()"
+                            style="padding:5px 12px;font-size:12px;border-radius:3px;cursor:pointer;border:1px solid var(--color-content-border);">
+                        &#128247; Camera
+                    </button>
+                </div>
+                <input type="file" id="vp-file-gallery" accept="image/*" multiple style="display:none;" />
+                <input type="file" id="vp-file-camera" accept="image/*" capture="environment" style="display:none;" />
+            </div>
+            <div id="vp-upload-progress" style="font-size:11px;margin-top:6px;"></div>
             <?php if (!empty($photos)): ?>
-            | <a href="index.php?navigate=deletepartimage&id=<?= $id ?>">Manage photos</a>
+            <p style="margin-top:6px;font-size:12px;text-align:center;">
+                <a href="index.php?navigate=deletepartimage&id=<?= $id ?>">Manage / reorder photos</a>
+            </p>
             <?php endif; ?>
-        </p>
+        </div>
         <?php endif; ?>
     </div>
 
     <!-- Details -->
     <div style="flex:1;min-width:200px;">
         <table style="border-collapse:collapse;font-size:13px;width:100%;">
-            <tr><td style="padding:5px 12px 5px 0;font-weight:bold;white-space:nowrap;">Price:</td>
-                <td style="padding:5px 0;font-size:20px;font-weight:bold;color:var(--color-accent);">
+            <tr>
+                <td style="padding:5px 12px 5px 0;font-weight:bold;white-space:nowrap;">Price:</td>
+                <td style="padding:5px 0;font-size:20px;font-weight:bold;color:var(--color-accent);" id="field-price">
                     <?php if ($part['price'] !== null): ?>
                     &euro;<?= number_format((float)$part['price'], 2, ',', '.') ?>
-                    <?php else: ?><span style="font-size:14px;color:#888;font-weight:normal;">Price on request</span><?php endif; ?>
+                    <?php else: ?><span style="font-size:14px;color:#888;font-weight:normal;">On request</span><?php endif; ?>
                     <?php if ($is_sold): ?><span style="font-size:13px;color:#c04040;"> &mdash; sold</span><?php endif; ?>
-                </td></tr>
-            <tr><td style="padding:5px 12px 5px 0;font-weight:bold;">Status:</td>
+                    <?php if ($can_edit && !$is_sold): ?>
+                    <span class="edit-pencil" onclick="inlineEdit('price','field-price','number','<?= $part['price'] !== null ? htmlspecialchars($part['price']) : '' ?>')"
+                          title="Edit price" style="cursor:pointer;font-size:14px;color:#bbb;margin-left:6px;vertical-align:middle;">&#9998;</span>
+                    <?php endif; ?>
+                </td>
+            </tr>
+            <tr>
+                <td style="padding:5px 12px 5px 0;font-weight:bold;">Status:</td>
                 <td style="padding:5px 0;">
                     <?php if ($is_sold): ?>
                         <span style="color:#c04040;font-weight:bold;">Sold</span>
@@ -134,7 +184,8 @@ $is_sold   = !empty($part['is_sold']);
                         <?= $part['for_sale'] ? 'For sale' : 'Display only' ?>
                     <?php endif; ?>
                     <?php if (!$part['visible']): ?> <span style="color:#c04040;">(Private)</span><?php endif; ?>
-                </td></tr>
+                </td>
+            </tr>
             <tr><td style="padding:5px 12px 5px 0;font-weight:bold;">Make:</td>
                 <td style="padding:5px 0;"><?= htmlspecialchars($part['make_name']) ?></td></tr>
             <?php if ($part['model_name']): ?>
@@ -142,15 +193,19 @@ $is_sold   = !empty($part['is_sold']);
                 <td style="padding:5px 0;"><?= htmlspecialchars($part['model_name']) ?></td></tr>
             <?php endif; ?>
             <tr><td style="padding:5px 12px 5px 0;font-weight:bold;">Year(s):</td>
-                <td style="padding:5px 0;">
-                    <?= (int)$part['year_from'] ?><?= $part['year_to'] ? '&ndash;' . (int)$part['year_to'] : '' ?>
-                </td></tr>
+                <td style="padding:5px 0;"><?= (int)$part['year_from'] ?><?= $part['year_to'] ? '&ndash;' . (int)$part['year_to'] : '' ?></td></tr>
             <tr><td style="padding:5px 12px 5px 0;font-weight:bold;">Condition:</td>
-                <td style="padding:5px 0;">
-                    <?= (int)$part['condition'] ?>/5 &mdash; <?= htmlspecialchars(parts_condition_label((int)$part['condition'])) ?>
-                </td></tr>
-            <tr><td style="padding:5px 12px 5px 0;font-weight:bold;">In stock:</td>
-                <td style="padding:5px 0;"><?= (int)$part['stock'] ?></td></tr>
+                <td style="padding:5px 0;"><?= (int)$part['condition'] ?>/5 &mdash; <?= htmlspecialchars(parts_condition_label((int)$part['condition'])) ?></td></tr>
+            <tr>
+                <td style="padding:5px 12px 5px 0;font-weight:bold;white-space:nowrap;">In stock:</td>
+                <td style="padding:5px 0;" id="field-stock">
+                    <?= (int)$part['stock'] ?>
+                    <?php if ($can_edit): ?>
+                    <span class="edit-pencil" onclick="inlineEdit('stock','field-stock','number','<?= (int)$part['stock'] ?>')"
+                          title="Edit stock" style="cursor:pointer;font-size:14px;color:#bbb;margin-left:6px;vertical-align:middle;">&#9998;</span>
+                    <?php endif; ?>
+                </td>
+            </tr>
             <?php if (!empty($part['oem_number'])): ?>
             <tr><td style="padding:5px 12px 5px 0;font-weight:bold;">OEM number:</td>
                 <td style="padding:5px 0;font-family:monospace;"><?= htmlspecialchars($part['oem_number']) ?></td></tr>
@@ -170,9 +225,7 @@ $is_sold   = !empty($part['is_sold']);
                     <?php endif; ?>
                 </td></tr>
             <tr><td style="padding:5px 12px 5px 0;font-weight:bold;">Listed:</td>
-                <td style="padding:5px 0;font-size:12px;color:#888;">
-                    <?= htmlspecialchars(substr($part['created_at'], 0, 10)) ?>
-                </td></tr>
+                <td style="padding:5px 0;font-size:12px;color:#888;"><?= htmlspecialchars(substr($part['created_at'], 0, 10)) ?></td></tr>
         </table>
 
         <?php if (!empty($part['description'])): ?>
@@ -203,7 +256,7 @@ $is_sold   = !empty($part['is_sold']);
 
         <?php if ($can_edit): ?>
         <p style="margin-top:14px;">
-            <a href="index.php?navigate=editpart&id=<?= $id ?>" class="btn" style="padding:6px 14px;">Edit</a>
+            <a href="index.php?navigate=editpart&id=<?= $id ?>" class="btn" style="padding:6px 14px;">Edit full listing</a>
             <?php if (!$is_sold): ?>
             <a href="index.php?navigate=markpartsold&id=<?= $id ?>"
                style="padding:6px 14px;background:#c87020;color:#fff;text-decoration:none;border-radius:3px;margin-left:8px;font-size:13px;"
@@ -234,28 +287,6 @@ $is_sold   = !empty($part['is_sold']);
        style="font-size:11px;color:#aaa;margin-left:4px;" title="Report this listing">&#9873; Report</a>
     <?php endif; ?>
 </p>
-<script>
-function sharePartLink() {
-    var url = window.location.origin + window.location.pathname + '?navigate=viewpart&id=<?= $id ?>';
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(url).then(function() { showCopied(); });
-    } else {
-        var ta = document.createElement('textarea');
-        ta.value = url;
-        ta.style.cssText = 'position:fixed;top:-9999px;left:-9999px;';
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand('copy');
-        document.body.removeChild(ta);
-        showCopied();
-    }
-}
-function showCopied() {
-    var el = document.getElementById('share-copied');
-    el.style.display = 'inline';
-    setTimeout(function() { el.style.display = 'none'; }, 2500);
-}
-</script>
 </div>
 
 <!-- Q&A / Messages section -->
@@ -297,7 +328,7 @@ if ($msg_sent): ?>
 <?php endif; ?>
 
 <form method="post" action="index.php?navigate=processpartmessage">
-    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>" />
+    <input type="hidden" name="csrf_token" value="<?= $csrf ?>" />
     <input type="hidden" name="part_id"   value="<?= $id ?>" />
     <?php if (empty($_SESSION['authenticated'])): ?>
     <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:10px;">
@@ -320,6 +351,41 @@ if ($msg_sent): ?>
 <?php endif; ?>
 </div>
 
+<?php if (!empty($related)): ?>
+<!-- Related parts (same make) -->
+<div class="content-box">
+<h3>More <?= htmlspecialchars($part['make_name']) ?> parts</h3>
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;">
+<?php foreach ($related as $rp):
+    $rthumb = parts_first_photo((int)$rp['id']);
+?>
+<a href="index.php?navigate=viewpart&id=<?= (int)$rp['id'] ?>"
+   style="display:block;border:1px solid var(--color-content-border);border-radius:5px;
+          overflow:hidden;text-decoration:none;color:inherit;background:var(--color-surface);
+          transition:box-shadow .15s;"
+   onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.15)'"
+   onmouseout="this.style.boxShadow='none'">
+    <?php if ($rthumb): ?>
+    <img src="<?= htmlspecialchars($rthumb) ?>" alt=""
+         style="width:100%;height:100px;object-fit:cover;display:block;" />
+    <?php else: ?>
+    <div style="width:100%;height:100px;background:var(--color-input-bg);
+                display:flex;align-items:center;justify-content:center;font-size:24px;">&#128295;</div>
+    <?php endif; ?>
+    <div style="padding:6px 8px;">
+        <div style="font-size:12px;font-weight:bold;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+            <?= htmlspecialchars($rp['title']) ?>
+        </div>
+        <div style="font-size:12px;color:var(--color-accent);font-weight:bold;margin-top:2px;">
+            <?= $rp['price'] !== null ? '&euro;' . number_format((float)$rp['price'], 2, ',', '.') : '<span style="font-size:11px;color:#888;font-weight:normal;">On request</span>' ?>
+        </div>
+    </div>
+</a>
+<?php endforeach; ?>
+</div>
+</div>
+<?php endif; ?>
+
 <!-- Lightbox -->
 <div id="lightbox" onclick="this.style.display='none'"
      style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;
@@ -327,9 +393,167 @@ if ($msg_sent): ?>
             align-items:center;justify-content:center;cursor:zoom-out;">
     <img id="lightbox-img" src="" alt="" style="max-width:90%;max-height:90%;object-fit:contain;" />
 </div>
+
 <script>
+var _partId = <?= $id ?>;
+var _csrf   = '<?= $csrf ?>';
+
+// ── Lightbox ──────────────────────────────────────────────────────────────────
 function openLightbox(src) {
     document.getElementById('lightbox-img').src = src;
     document.getElementById('lightbox').style.display = 'flex';
 }
+
+// ── Share ─────────────────────────────────────────────────────────────────────
+function sharePartLink() {
+    var url = window.location.origin + window.location.pathname + '?navigate=viewpart&id=<?= $id ?>';
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(showCopied);
+    } else {
+        var ta = document.createElement('textarea');
+        ta.value = url;
+        ta.style.cssText = 'position:fixed;top:-9999px;left:-9999px;';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        showCopied();
+    }
+}
+function showCopied() {
+    var el = document.getElementById('share-copied');
+    el.style.display = 'inline';
+    setTimeout(function() { el.style.display = 'none'; }, 2500);
+}
+
+<?php if ($can_edit): ?>
+// ── Inline field edit ─────────────────────────────────────────────────────────
+function inlineEdit(field, cellId, inputType, currentRaw) {
+    var cell = document.getElementById(cellId);
+    if (cell.dataset.editing) return;
+    cell.dataset.editing = '1';
+
+    var pencil = cell.querySelector('.edit-pencil');
+    var origHTML = cell.innerHTML;
+
+    var inp = document.createElement('input');
+    inp.type = inputType || 'text';
+    inp.value = currentRaw;
+    inp.placeholder = field === 'price' ? 'blank = on request' : '';
+    inp.style.cssText = 'width:110px;padding:3px 5px;font-size:14px;vertical-align:middle;';
+
+    var saveBtn = document.createElement('button');
+    saveBtn.textContent = '✓';
+    saveBtn.style.cssText = 'padding:2px 8px;margin-left:5px;cursor:pointer;';
+
+    var cancelBtn = document.createElement('button');
+    cancelBtn.textContent = '✕';
+    cancelBtn.style.cssText = 'padding:2px 6px;margin-left:4px;cursor:pointer;';
+
+    cell.innerHTML = '';
+    cell.appendChild(inp);
+    cell.appendChild(saveBtn);
+    cell.appendChild(cancelBtn);
+    inp.focus(); inp.select();
+
+    function cancel() {
+        cell.innerHTML = origHTML;
+        delete cell.dataset.editing;
+    }
+
+    function save() {
+        saveBtn.disabled = true;
+        fetch('index.php?navigate=inlineeditpart&ajax=1', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: 'csrf_token=' + encodeURIComponent(_csrf)
+                + '&part_id=' + _partId
+                + '&field='   + encodeURIComponent(field)
+                + '&value='   + encodeURIComponent(inp.value)
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            if (d.ok) {
+                cell.innerHTML = d.display
+                    + ' <span class="edit-pencil" onclick="inlineEdit(\'' + field + '\',\'' + cellId + '\',\'' + inputType + '\',\'' + d.raw.replace(/'/g,"\\'") + '\')"'
+                    + ' title="Edit" style="cursor:pointer;font-size:14px;color:#bbb;margin-left:6px;vertical-align:middle;">&#9998;</span>';
+            } else {
+                alert('Save failed: ' + (d.error || 'Unknown error'));
+                cancel();
+            }
+            delete cell.dataset.editing;
+        })
+        .catch(function() { alert('Network error'); cancel(); });
+    }
+
+    saveBtn.addEventListener('click', save);
+    cancelBtn.addEventListener('click', cancel);
+    inp.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter')  save();
+        if (e.key === 'Escape') cancel();
+    });
+}
+
+// ── Inline photo upload ───────────────────────────────────────────────────────
+(function() {
+    var zone    = document.getElementById('vp-drop-zone');
+    var gallery = document.getElementById('vp-file-gallery');
+    var camera  = document.getElementById('vp-file-camera');
+    var prog    = document.getElementById('vp-upload-progress');
+
+    if (!zone) return;
+
+    zone.addEventListener('dragover',  function(e) { e.preventDefault(); zone.style.background = 'var(--color-input-bg)'; });
+    zone.addEventListener('dragleave', function()  { zone.style.background = 'var(--color-surface)'; });
+    zone.addEventListener('drop',      function(e) { e.preventDefault(); zone.style.background = 'var(--color-surface)'; uploadFiles(e.dataTransfer.files); });
+    gallery.addEventListener('change', function() { uploadFiles(this.files); this.value = ''; });
+    camera.addEventListener('change',  function() { uploadFiles(this.files); this.value = ''; });
+
+    function uploadFiles(files) { Array.from(files).forEach(uploadOne); }
+
+    function uploadOne(file) {
+        var row = document.createElement('div');
+        row.style.cssText = 'font-size:11px;color:#888;margin:2px 0;';
+        row.textContent = '↑ ' + file.name + '…';
+        prog.appendChild(row);
+
+        var fd = new FormData();
+        fd.append('csrf_token', _csrf);
+        fd.append('id', _partId);
+        fd.append('photo', file);
+
+        fetch('index.php?navigate=uploadpartimage&id=' + _partId + '&ajax=1', { method: 'POST', body: fd })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            if (d.ok) {
+                row.textContent = '✓ ' + file.name;
+                row.style.color = '#2a7a2a';
+
+                // Append to thumb strip or main photo slot
+                var strip = document.getElementById('thumb-strip');
+                var mainImg = document.getElementById('main-photo');
+                var newSrc = d.path + '?t=' + Date.now();
+
+                if (!mainImg) {
+                    // No photos existed yet — reload to show full widget
+                    location.reload();
+                    return;
+                }
+                var img = document.createElement('img');
+                img.src = newSrc;
+                img.style.cssText = 'width:60px;height:45px;object-fit:cover;cursor:pointer;border-radius:3px;border:1px solid var(--color-content-border);';
+                img.addEventListener('click', function() { mainImg.src = this.src; });
+                if (strip) strip.appendChild(img);
+            } else {
+                row.textContent = '✗ ' + file.name + ': ' + (d.error || 'Upload failed');
+                row.style.color = '#c04040';
+            }
+        })
+        .catch(function() {
+            row.textContent = '✗ ' + file.name + ': Network error';
+            row.style.color = '#c04040';
+        });
+    }
+})();
+<?php endif; ?>
 </script>

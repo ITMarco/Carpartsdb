@@ -15,9 +15,22 @@ $filter_year   = isset($_GET['year'])   ? intval($_GET['year'])   : 0;
 $filter_cond   = isset($_GET['cond'])   ? intval($_GET['cond'])   : -1;
 $filter_q      = isset($_GET['q'])      ? trim($_GET['q'])        : '';
 $filter_seller = isset($_GET['seller']) ? intval($_GET['seller']) : 0;
+$filter_sort   = isset($_GET['sort'])   ? $_GET['sort']           : 'newest';
 $page         = max(1, isset($_GET['pg']) ? intval($_GET['pg']) : 1);
 $per_page     = 20;
 $offset       = ($page - 1) * $per_page;
+
+$allowed_sorts = ['newest','oldest','price_asc','price_desc','cond_asc','cond_desc'];
+if (!in_array($filter_sort, $allowed_sorts, true)) $filter_sort = 'newest';
+
+$order_by = match($filter_sort) {
+    'oldest'     => 'p.`created_at` ASC',
+    'price_asc'  => 'CASE WHEN p.`price` IS NULL THEN 1 ELSE 0 END, p.`price` ASC',
+    'price_desc' => 'p.`price` DESC',
+    'cond_asc'   => 'p.`condition` ASC',
+    'cond_desc'  => 'p.`condition` DESC',
+    default      => 'p.`created_at` DESC',
+};
 
 $is_member = !empty($_SESSION['is_member']) || !empty($_SESSION['isadmin']);
 
@@ -35,43 +48,20 @@ $where  = ["p.`visible` = 1", "COALESCE(p.`is_sold`,0) = 0"];
 $params = [];
 $types  = '';
 
-if (!$is_member) {
-    $where[] = "p.`visible_private` = 0";
-}
-if ($filter_make > 0) {
-    $where[]  = "p.`make_id` = ?";
-    $params[] = $filter_make;
-    $types   .= 'i';
-}
-if ($filter_model > 0) {
-    $where[]  = "p.`model_id` = ?";
-    $params[] = $filter_model;
-    $types   .= 'i';
-}
+if (!$is_member) $where[] = "p.`visible_private` = 0";
+if ($filter_make > 0)  { $where[] = "p.`make_id` = ?";  $params[] = $filter_make;  $types .= 'i'; }
+if ($filter_model > 0) { $where[] = "p.`model_id` = ?"; $params[] = $filter_model; $types .= 'i'; }
 if ($filter_year > 0) {
-    $where[]  = "(p.`year_from` <= ? AND (p.`year_to` IS NULL OR p.`year_to` >= ?))";
-    $params[] = $filter_year;
-    $params[] = $filter_year;
-    $types   .= 'ii';
+    $where[] = "(p.`year_from` <= ? AND (p.`year_to` IS NULL OR p.`year_to` >= ?))";
+    $params[] = $filter_year; $params[] = $filter_year; $types .= 'ii';
 }
-if ($filter_cond >= 0 && $filter_cond <= 5) {
-    $where[]  = "p.`condition` = ?";
-    $params[] = $filter_cond;
-    $types   .= 'i';
-}
+if ($filter_cond >= 0 && $filter_cond <= 5) { $where[] = "p.`condition` = ?"; $params[] = $filter_cond; $types .= 'i'; }
 if ($filter_q !== '') {
-    $like     = '%' . $filter_q . '%';
-    $where[]  = "(p.`title` LIKE ? OR p.`oem_number` LIKE ? OR p.`replacement_number` LIKE ?)";
-    $params[] = $like;
-    $params[] = $like;
-    $params[] = $like;
-    $types   .= 'sss';
+    $like = '%' . $filter_q . '%';
+    $where[] = "(p.`title` LIKE ? OR p.`oem_number` LIKE ? OR p.`replacement_number` LIKE ?)";
+    $params[] = $like; $params[] = $like; $params[] = $like; $types .= 'sss';
 }
-if ($filter_seller > 0) {
-    $where[]  = "p.`seller_id` = ?";
-    $params[] = $filter_seller;
-    $types   .= 'i';
-}
+if ($filter_seller > 0) { $where[] = "p.`seller_id` = ?"; $params[] = $filter_seller; $types .= 'i'; }
 
 $where_sql = implode(' AND ', $where);
 $base_sql  = "FROM `PARTS` p
@@ -98,13 +88,12 @@ $stmt  = $CarpartsConnection->prepare(
             p.`stock`, p.`oem_number`, p.`visible_private`, p.`for_sale`, p.`created_at`,
             m.`name` AS make_name, mo.`name` AS model_name
      {$base_sql}
-     ORDER BY p.`created_at` DESC
+     ORDER BY {$order_by}
      LIMIT ? OFFSET ?"
 );
 if ($stmt) {
     $all_params = array_merge($params, [$per_page, $offset]);
-    $all_types  = $types . 'ii';
-    $stmt->bind_param($all_types, ...$all_params);
+    $stmt->bind_param($types . 'ii', ...$all_params);
     $stmt->execute();
     $res = $stmt->get_result();
     while ($row = $res->fetch_assoc()) $parts[] = $row;
@@ -113,10 +102,23 @@ if ($stmt) {
 
 $makes       = makes_list($CarpartsConnection);
 $models_json = makes_all_models_json($CarpartsConnection);
+
+// Batch-fetch "also fits" makes for displayed parts
+$compat_makes = [];
+if (!empty($parts)) {
+    $pids = implode(',', array_map(fn($p) => (int)$p['id'], $parts));
+    $cq = $CarpartsConnection->query(
+        "SELECT pc.part_id, GROUP_CONCAT(DISTINCT m.name ORDER BY m.name SEPARATOR ', ') AS makes
+         FROM PART_COMPAT pc JOIN CAR_MAKES m ON m.id = pc.make_id
+         WHERE pc.part_id IN ({$pids}) GROUP BY pc.part_id"
+    );
+    if ($cq) while ($cr = $cq->fetch_assoc()) $compat_makes[(int)$cr['part_id']] = $cr['makes'];
+}
+
 mysqli_close($CarpartsConnection);
 
 function browse_url(array $overrides = []): string {
-    global $filter_make, $filter_model, $filter_year, $filter_cond, $filter_q, $filter_seller;
+    global $filter_make, $filter_model, $filter_year, $filter_cond, $filter_q, $filter_seller, $filter_sort;
     $current = array_filter([
         'navigate' => 'browse',
         'make'     => $filter_make   ?: null,
@@ -125,6 +127,7 @@ function browse_url(array $overrides = []): string {
         'cond'     => $filter_cond >= 0 ? $filter_cond : null,
         'q'        => $filter_q !== '' ? $filter_q : null,
         'seller'   => $filter_seller ?: null,
+        'sort'     => $filter_sort !== 'newest' ? $filter_sort : null,
     ], fn($v) => $v !== null);
     return 'index.php?' . http_build_query(array_merge($current, $overrides));
 }
@@ -133,13 +136,18 @@ function browse_url(array $overrides = []): string {
 <div class="content-box">
 <h3>Browse Parts</h3>
 
-<form method="get" action="index.php" style="margin-bottom:14px;">
+<!-- Sticky filter bar -->
+<div id="filter-bar" style="position:sticky;top:0;z-index:50;
+     background:var(--color-content-bg,var(--color-surface));
+     padding-bottom:10px;margin-bottom:4px;
+     border-bottom:1px solid var(--color-content-border);">
+<form method="get" action="index.php">
     <input type="hidden" name="navigate" value="browse" />
     <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;">
         <div>
             <label style="font-size:12px;">Search</label><br>
             <input type="text" name="q" value="<?= htmlspecialchars($filter_q) ?>"
-                   placeholder="Title / OEM number&hellip;" style="width:170px;padding:5px;" />
+                   placeholder="Title / OEM number&hellip;" style="width:150px;padding:5px;" />
         </div>
         <div>
             <label style="font-size:12px;">Make</label><br>
@@ -159,8 +167,7 @@ function browse_url(array $overrides = []): string {
         <div>
             <label style="font-size:12px;">Year</label><br>
             <input type="number" name="year" value="<?= $filter_year ?: '' ?>"
-                   min="1900" max="2099" placeholder="e.g. 1992"
-                   style="width:86px;padding:5px;" />
+                   min="1900" max="2099" placeholder="e.g. 1992" style="width:86px;padding:5px;" />
         </div>
         <div>
             <label style="font-size:12px;">Condition</label><br>
@@ -172,11 +179,23 @@ function browse_url(array $overrides = []): string {
             </select>
         </div>
         <div>
+            <label style="font-size:12px;">Sort</label><br>
+            <select name="sort" style="padding:5px;">
+                <option value="newest"     <?= $filter_sort==='newest'     ?'selected':'' ?>>Newest first</option>
+                <option value="oldest"     <?= $filter_sort==='oldest'     ?'selected':'' ?>>Oldest first</option>
+                <option value="price_asc"  <?= $filter_sort==='price_asc'  ?'selected':'' ?>>Price &uarr;</option>
+                <option value="price_desc" <?= $filter_sort==='price_desc' ?'selected':'' ?>>Price &darr;</option>
+                <option value="cond_asc"   <?= $filter_sort==='cond_asc'   ?'selected':'' ?>>Condition &uarr;</option>
+                <option value="cond_desc"  <?= $filter_sort==='cond_desc'  ?'selected':'' ?>>Condition &darr;</option>
+            </select>
+        </div>
+        <div>
             <input type="submit" value="Search" class="btn" style="padding:6px 16px;" />
             <a href="index.php?navigate=browse" style="margin-left:8px;font-size:12px;">Reset</a>
         </div>
     </div>
 </form>
+</div>
 
 <script>
 var _models = <?= $models_json ?>;
@@ -204,9 +223,9 @@ updateModels();
 </p>
 <?php endif; ?>
 
-<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
+<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin:10px 0 8px;">
     <p style="font-size:12px;color:#666;margin:0;"><?= number_format($total_rows) ?> part(s) found.</p>
-    <div id="view-toggle" style="display:flex;gap:4px;">
+    <div style="display:flex;gap:4px;">
         <button id="btn-list" onclick="setView('list')"
                 style="padding:4px 10px;font-size:12px;border-radius:3px;cursor:pointer;border:1px solid var(--color-content-border);">
             &#9776; List
@@ -222,7 +241,7 @@ updateModels();
 <p>No parts found matching your criteria.</p>
 <?php else: ?>
 
-<!-- ── List view ─────────────────────────────────────────────────────────────── -->
+<!-- ── List view ──────────────────────────────────────────────────────────────── -->
 <div id="view-list">
 <table style="width:100%;border-collapse:collapse;font-size:13px;">
 <tr style="font-weight:bold;border-bottom:2px solid var(--color-content-border);">
@@ -247,8 +266,7 @@ updateModels();
         <?php else: ?>
             <div style="width:64px;height:48px;background:var(--color-surface);
                         border:1px dashed var(--color-content-border);border-radius:3px;
-                        display:flex;align-items:center;justify-content:center;
-                        font-size:18px;">&#128295;</div>
+                        display:flex;align-items:center;justify-content:center;font-size:18px;">&#128295;</div>
         <?php endif; ?>
         </a>
     </td>
@@ -257,6 +275,7 @@ updateModels();
         <?php if ($p['visible_private']): ?><span style="font-size:10px;color:#c04040;"> [private]</span><?php endif; ?>
         <?php if (!$p['for_sale']): ?><br><small style="color:#666;">[display only]</small><?php endif; ?>
         <?php if (!empty($p['oem_number'])): ?><br><small style="color:#888;">OEM: <?= htmlspecialchars($p['oem_number']) ?></small><?php endif; ?>
+        <?php if (isset($compat_makes[$p['id']])): ?><br><small style="color:#aaa;font-size:10px;">Also fits: <?= htmlspecialchars($compat_makes[$p['id']]) ?></small><?php endif; ?>
         <br><small style="color:#aaa;font-size:11px;"><?= sprintf('PART-%05d', $p['id']) ?></small>
     </td>
     <td style="padding:4px 8px;">
@@ -272,7 +291,7 @@ updateModels();
 </table>
 </div>
 
-<!-- ── Tile view ─────────────────────────────────────────────────────────────── -->
+<!-- ── Tile view ──────────────────────────────────────────────────────────────── -->
 <div id="view-tile" style="display:none;">
 <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;">
 <?php foreach ($parts as $p):
@@ -281,7 +300,8 @@ updateModels();
 <a href="index.php?navigate=viewpart&id=<?= (int)$p['id'] ?>"
    style="display:block;border:1px solid var(--color-content-border);border-radius:6px;
           overflow:hidden;text-decoration:none;color:inherit;background:var(--color-surface);
-          transition:box-shadow .15s;" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.15)'"
+          transition:box-shadow .15s;"
+   onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.15)'"
    onmouseout="this.style.boxShadow='none'">
     <?php if ($thumb): ?>
     <img src="<?= htmlspecialchars($thumb) ?>" alt=""
@@ -296,6 +316,9 @@ updateModels();
         <div style="font-size:11px;color:#888;margin-bottom:2px;">
             <?= htmlspecialchars($p['make_name']) ?><?= $p['model_name'] ? ' &mdash; ' . htmlspecialchars($p['model_name']) : '' ?>
         </div>
+        <?php if (isset($compat_makes[$p['id']])): ?>
+        <div style="font-size:10px;color:#aaa;margin-bottom:2px;">Also: <?= htmlspecialchars($compat_makes[$p['id']]) ?></div>
+        <?php endif; ?>
         <div style="font-size:13px;font-weight:bold;color:var(--color-accent);">
             <?= $p['price'] !== null ? '&euro;' . number_format((float)$p['price'], 2, ',', '.') : '<span style="font-size:11px;color:#888;font-weight:normal;">On request</span>' ?>
         </div>
@@ -343,7 +366,5 @@ function setView(v) {
         document.cookie = 'cpdb_browse_view=' + encodeURIComponent(v) + '; path=/; max-age=' + (365*24*3600) + '; SameSite=Lax';
     }
 }
-
-// Apply initial view from server-side preference
 setView(_currentView);
 </script>
