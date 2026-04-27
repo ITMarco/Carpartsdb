@@ -3,6 +3,7 @@ include 'connection.php';
 include_once 'parts_helper.php';
 include_once 'makes_helper.php';
 include_once 'stats_helper.php';
+include_once 'settings_helper.php';
 
 parts_ensure_table($CarpartsConnection);
 stats_day($CarpartsConnection, 'searches');
@@ -19,6 +20,15 @@ $per_page     = 20;
 $offset       = ($page - 1) * $per_page;
 
 $is_member = !empty($_SESSION['is_member']) || !empty($_SESSION['isadmin']);
+
+// ── Browse view preference ────────────────────────────────────────────────────
+$uid = isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : 0;
+$browse_view = 'list';
+if ($uid > 0) {
+    $browse_view = settings_get($CarpartsConnection, "browse_view_u{$uid}", 'list');
+} elseif (isset($_COOKIE['cpdb_browse_view']) && $_COOKIE['cpdb_browse_view'] === 'tile') {
+    $browse_view = 'tile';
+}
 
 // ── Build query ───────────────────────────────────────────────────────────────
 $where  = ["p.`visible` = 1", "COALESCE(p.`is_sold`,0) = 0"];
@@ -180,7 +190,7 @@ function updateModels() {
             var o = document.createElement('option');
             o.value = m.id;
             o.selected = (m.id === _prevModel);
-            o.textContent = m.name + (m.yf ? ' (' + m.yf + (m.yt ? '\u2013' + m.yt : '\u2013') + ')' : '');
+            o.textContent = m.name + (m.yf ? ' (' + m.yf + (m.yt ? '–' + m.yt : '–') + ')' : '');
             sel.appendChild(o);
         });
     }
@@ -193,11 +203,27 @@ updateModels();
     Showing listings by one seller. <a href="index.php?navigate=browse">Show all</a>
 </p>
 <?php endif; ?>
-<p style="font-size:12px;color:#666;"><?= number_format($total_rows) ?> part(s) found.</p>
+
+<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
+    <p style="font-size:12px;color:#666;margin:0;"><?= number_format($total_rows) ?> part(s) found.</p>
+    <div id="view-toggle" style="display:flex;gap:4px;">
+        <button id="btn-list" onclick="setView('list')"
+                style="padding:4px 10px;font-size:12px;border-radius:3px;cursor:pointer;border:1px solid var(--color-content-border);">
+            &#9776; List
+        </button>
+        <button id="btn-tile" onclick="setView('tile')"
+                style="padding:4px 10px;font-size:12px;border-radius:3px;cursor:pointer;border:1px solid var(--color-content-border);">
+            &#9726; Tiles
+        </button>
+    </div>
+</div>
 
 <?php if (empty($parts)): ?>
 <p>No parts found matching your criteria.</p>
 <?php else: ?>
+
+<!-- ── List view ─────────────────────────────────────────────────────────────── -->
+<div id="view-list">
 <table style="width:100%;border-collapse:collapse;font-size:13px;">
 <tr style="font-weight:bold;border-bottom:2px solid var(--color-content-border);">
     <td style="padding:5px 8px;width:70px;"></td>
@@ -222,7 +248,7 @@ updateModels();
             <div style="width:64px;height:48px;background:var(--color-surface);
                         border:1px dashed var(--color-content-border);border-radius:3px;
                         display:flex;align-items:center;justify-content:center;
-                        font-size:18px;">🔧</div>
+                        font-size:18px;">&#128295;</div>
         <?php endif; ?>
         </a>
     </td>
@@ -244,6 +270,41 @@ updateModels();
 </tr>
 <?php endforeach; ?>
 </table>
+</div>
+
+<!-- ── Tile view ─────────────────────────────────────────────────────────────── -->
+<div id="view-tile" style="display:none;">
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;">
+<?php foreach ($parts as $p):
+    $thumb = parts_first_photo((int)$p['id']);
+?>
+<a href="index.php?navigate=viewpart&id=<?= (int)$p['id'] ?>"
+   style="display:block;border:1px solid var(--color-content-border);border-radius:6px;
+          overflow:hidden;text-decoration:none;color:inherit;background:var(--color-surface);
+          transition:box-shadow .15s;" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.15)'"
+   onmouseout="this.style.boxShadow='none'">
+    <?php if ($thumb): ?>
+    <img src="<?= htmlspecialchars($thumb) ?>" alt=""
+         style="width:100%;height:130px;object-fit:cover;display:block;" />
+    <?php else: ?>
+    <div style="width:100%;height:130px;background:var(--color-input-bg);
+                display:flex;align-items:center;justify-content:center;font-size:32px;">&#128295;</div>
+    <?php endif; ?>
+    <div style="padding:8px 10px;">
+        <div style="font-size:13px;font-weight:bold;line-height:1.3;margin-bottom:4px;
+                    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><?= htmlspecialchars($p['title']) ?></div>
+        <div style="font-size:11px;color:#888;margin-bottom:2px;">
+            <?= htmlspecialchars($p['make_name']) ?><?= $p['model_name'] ? ' &mdash; ' . htmlspecialchars($p['model_name']) : '' ?>
+        </div>
+        <div style="font-size:13px;font-weight:bold;color:var(--color-accent);">
+            <?= $p['price'] !== null ? '&euro;' . number_format((float)$p['price'], 2, ',', '.') : '<span style="font-size:11px;color:#888;font-weight:normal;">On request</span>' ?>
+        </div>
+        <div style="font-size:11px;color:#aaa;margin-top:2px;"><?= sprintf('PART-%05d', $p['id']) ?></div>
+    </div>
+</a>
+<?php endforeach; ?>
+</div>
+</div>
 
 <?php if ($total_pages > 1): ?>
 <div style="margin-top:12px;display:flex;gap:5px;flex-wrap:wrap;">
@@ -261,3 +322,28 @@ updateModels();
 </p>
 <?php endif; ?>
 </div>
+
+<script>
+var _currentView = '<?= htmlspecialchars($browse_view) ?>';
+var _loggedIn    = <?= $uid > 0 ? 'true' : 'false' ?>;
+
+function setView(v) {
+    _currentView = v;
+    document.getElementById('view-list').style.display = (v === 'list') ? '' : 'none';
+    document.getElementById('view-tile').style.display = (v === 'tile') ? '' : 'none';
+    document.getElementById('btn-list').style.fontWeight = (v === 'list') ? 'bold' : 'normal';
+    document.getElementById('btn-tile').style.fontWeight = (v === 'tile') ? 'bold' : 'normal';
+    if (_loggedIn) {
+        fetch('index.php?navigate=savebrowseview&ajax=1', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: 'view=' + encodeURIComponent(v)
+        });
+    } else {
+        document.cookie = 'cpdb_browse_view=' + encodeURIComponent(v) + '; path=/; max-age=' + (365*24*3600) + '; SameSite=Lax';
+    }
+}
+
+// Apply initial view from server-side preference
+setView(_currentView);
+</script>

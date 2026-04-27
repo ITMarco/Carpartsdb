@@ -16,6 +16,15 @@ if (strtotime($_cleanup_due) < time() - 86400) {
 }
 unset($_cleanup_due);
 
+// ── Browse view preference (shared with browse.php) ───────────────────────────
+$uid = isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : 0;
+$browse_view = 'list';
+if ($uid > 0) {
+    $browse_view = settings_get($CarpartsConnection, "browse_view_u{$uid}", 'list');
+} elseif (isset($_COOKIE['cpdb_browse_view']) && $_COOKIE['cpdb_browse_view'] === 'tile') {
+    $browse_view = 'tile';
+}
+
 // ── Stats ─────────────────────────────────────────────────────────────────────
 $total_parts  = 0;
 $total_makes  = 0;
@@ -98,65 +107,72 @@ if ($nq) while ($nr = $nq->fetch_assoc()) $news_items[] = $nr;
 <h3>Car Parts DB — Used Car Parts Marketplace</h3>
 <p>Find used car parts by make, model and year. Sell your spare parts directly to other enthusiasts.</p>
 
-<!-- Stat pills -->
-<div style="display:flex;gap:14px;flex-wrap:wrap;margin:16px 0;">
-    <div style="background:var(--color-surface);border:1px solid var(--color-content-border);border-radius:6px;padding:14px 20px;text-align:center;min-width:100px;">
-        <div style="font-size:28px;font-weight:bold;color:var(--color-accent);"><?= number_format($total_parts) ?></div>
-        <div style="font-size:11px;color:#5a7a90;margin-top:3px;">Parts listed</div>
-    </div>
-    <div style="background:var(--color-surface);border:1px solid var(--color-content-border);border-radius:6px;padding:14px 20px;text-align:center;min-width:100px;">
-        <div style="font-size:28px;font-weight:bold;color:var(--color-accent);"><?= number_format($total_makes) ?></div>
-        <div style="font-size:11px;color:#5a7a90;margin-top:3px;">Car makes</div>
-    </div>
-    <div style="background:var(--color-surface);border:1px solid var(--color-content-border);border-radius:6px;padding:14px 20px;text-align:center;min-width:100px;">
-        <div style="font-size:28px;font-weight:bold;color:var(--color-accent);"><?= number_format($total_sellers) ?></div>
-        <div style="font-size:11px;color:#5a7a90;margin-top:3px;">Sellers</div>
-    </div>
-</div>
+<!-- Stat pills + parts-by-make side by side -->
+<div style="display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start;margin:16px 0;">
 
-<?php if (!empty($top_makes)): ?>
-<!-- Top makes bar chart -->
-<div style="margin:18px 0;">
-    <div style="font-size:12px;font-weight:bold;color:var(--color-accent);margin-bottom:10px;">Parts by make</div>
-    <?php
-    $max_cnt = max(array_column($top_makes, 'cnt') ?: [1]);
-    foreach ($top_makes as $tm):
-        $pct = round($tm['cnt'] / $max_cnt * 100, 1);
-    ?>
-    <div style="display:flex;align-items:center;gap:8px;margin:4px 0;">
-        <div style="width:120px;font-size:12px;color:var(--color-text);text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-            <?= htmlspecialchars($tm['name']) ?>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+        <!-- Pills -->
+        <div style="display:flex;gap:14px;flex-wrap:wrap;">
+            <div style="background:var(--color-surface);border:1px solid var(--color-content-border);border-radius:6px;padding:14px 20px;text-align:center;min-width:100px;">
+                <div style="font-size:28px;font-weight:bold;color:var(--color-accent);"><?= number_format($total_parts) ?></div>
+                <div style="font-size:11px;color:#5a7a90;margin-top:3px;">Parts listed</div>
+            </div>
+            <div style="background:var(--color-surface);border:1px solid var(--color-content-border);border-radius:6px;padding:14px 20px;text-align:center;min-width:100px;">
+                <div style="font-size:28px;font-weight:bold;color:var(--color-accent);"><?= number_format($total_makes) ?></div>
+                <div style="font-size:11px;color:#5a7a90;margin-top:3px;">Car makes</div>
+            </div>
+            <div style="background:var(--color-surface);border:1px solid var(--color-content-border);border-radius:6px;padding:14px 20px;text-align:center;min-width:100px;">
+                <div style="font-size:28px;font-weight:bold;color:var(--color-accent);"><?= number_format($total_sellers) ?></div>
+                <div style="font-size:11px;color:#5a7a90;margin-top:3px;">Sellers</div>
+            </div>
         </div>
-        <div style="flex:1;height:16px;background:rgba(59,73,90,0.1);border-radius:3px;overflow:hidden;">
-            <div style="width:<?= $pct ?>%;height:100%;background:var(--btn-bg,#555);border-radius:3px;"></div>
+
+        <?php if (array_sum($cond_counts) > 0): ?>
+        <!-- Condition breakdown -->
+        <div>
+            <div style="font-size:11px;font-weight:bold;color:var(--color-accent);margin-bottom:6px;">Condition breakdown</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <?php
+            $cond_labels = ['Rubbish','Poor','Fair','Good','Very Good','Mint'];
+            $cond_colors = ['#c04040','#c87020','#c8a020','#5588bb','#3aaa3a','#2a6a2a'];
+            foreach ($cond_labels as $ci => $cl):
+                if ($cond_counts[$ci] == 0) continue;
+            ?>
+            <div style="background:var(--color-surface);border:1px solid var(--color-content-border);border-radius:4px;padding:4px 10px;font-size:11px;">
+                <span style="display:inline-block;width:8px;height:8px;background:<?= $cond_colors[$ci] ?>;border-radius:50%;margin-right:3px;vertical-align:middle;"></span>
+                <?= htmlspecialchars($cl) ?>: <strong><?= $cond_counts[$ci] ?></strong>
+            </div>
+            <?php endforeach; ?>
+            </div>
         </div>
-        <div style="width:28px;font-size:11px;color:#5a7a90;"><?= (int)$tm['cnt'] ?></div>
+        <?php endif; ?>
     </div>
-    <?php endforeach; ?>
-</div>
-<?php endif; ?>
 
-<?php if (array_sum($cond_counts) > 0): ?>
-<!-- Condition breakdown -->
-<div style="margin:18px 0;">
-    <div style="font-size:12px;font-weight:bold;color:var(--color-accent);margin-bottom:8px;">Condition breakdown</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;">
-    <?php
-    $cond_labels = ['Rubbish','Poor','Fair','Good','Very Good','Mint'];
-    $cond_colors = ['#c04040','#c87020','#c8a020','#5588bb','#3aaa3a','#2a6a2a'];
-    foreach ($cond_labels as $ci => $cl):
-        if ($cond_counts[$ci] == 0) continue;
-    ?>
-    <div style="background:var(--color-surface);border:1px solid var(--color-content-border);border-radius:4px;padding:6px 12px;font-size:12px;">
-        <span style="display:inline-block;width:9px;height:9px;background:<?= $cond_colors[$ci] ?>;border-radius:50%;margin-right:4px;vertical-align:middle;"></span>
-        <?= htmlspecialchars($cl) ?>: <strong><?= $cond_counts[$ci] ?></strong>
+    <?php if (!empty($top_makes)): ?>
+    <!-- Parts by make — compact bar chart -->
+    <div style="flex:1;min-width:180px;max-width:300px;">
+        <div style="font-size:11px;font-weight:bold;color:var(--color-accent);margin-bottom:6px;">Parts by make</div>
+        <?php
+        $max_cnt = max(array_column($top_makes, 'cnt') ?: [1]);
+        foreach ($top_makes as $tm):
+            $pct = round($tm['cnt'] / $max_cnt * 100, 1);
+        ?>
+        <div style="display:flex;align-items:center;gap:6px;margin:3px 0;">
+            <div style="width:80px;font-size:11px;color:var(--color-text);text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0;">
+                <?= htmlspecialchars($tm['name']) ?>
+            </div>
+            <div style="flex:1;height:11px;background:rgba(59,73,90,0.1);border-radius:2px;overflow:hidden;">
+                <div style="width:<?= $pct ?>%;height:100%;background:var(--btn-bg,#555);border-radius:2px;"></div>
+            </div>
+            <div style="width:22px;font-size:10px;color:#5a7a90;text-align:right;flex-shrink:0;"><?= (int)$tm['cnt'] ?></div>
+        </div>
+        <?php endforeach; ?>
     </div>
-    <?php endforeach; ?>
-    </div>
-</div>
-<?php endif; ?>
+    <?php endif; ?>
 
-<p style="margin-top:14px;">
+</div>
+
+<p style="margin-top:10px;">
     <a href="index.php?navigate=browse" class="btn" style="padding:8px 18px;font-size:14px;">Browse all parts</a>
     <a href="index.php?navigate=addpart" class="btn" style="padding:8px 18px;font-size:14px;margin-left:10px;">Sell a part</a>
 </p>
@@ -164,7 +180,22 @@ if ($nq) while ($nr = $nq->fetch_assoc()) $news_items[] = $nr;
 
 <?php if (!empty($recent_parts)): ?>
 <div class="content-box">
-<h3>Recently listed</h3>
+<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+    <h3 style="margin:0;">Recently listed</h3>
+    <div style="display:flex;gap:4px;">
+        <button id="home-btn-list" onclick="homeSetView('list')"
+                style="padding:4px 10px;font-size:12px;border-radius:3px;cursor:pointer;border:1px solid var(--color-content-border);">
+            &#9776; List
+        </button>
+        <button id="home-btn-tile" onclick="homeSetView('tile')"
+                style="padding:4px 10px;font-size:12px;border-radius:3px;cursor:pointer;border:1px solid var(--color-content-border);">
+            &#9726; Tiles
+        </button>
+    </div>
+</div>
+
+<!-- List view -->
+<div id="home-view-list">
 <table style="width:100%;border-collapse:collapse;font-size:13px;">
 <tr style="font-weight:bold;border-bottom:2px solid var(--color-content-border);">
     <td style="padding:6px 8px;width:70px;"></td>
@@ -188,7 +219,7 @@ if ($nq) while ($nr = $nq->fetch_assoc()) $news_items[] = $nr;
             <div style="width:64px;height:48px;background:var(--color-surface);
                         border:1px dashed var(--color-content-border);border-radius:3px;
                         display:flex;align-items:center;justify-content:center;
-                        font-size:18px;">🔧</div>
+                        font-size:18px;">&#128295;</div>
         <?php endif; ?>
         </a>
     </td>
@@ -210,6 +241,41 @@ if ($nq) while ($nr = $nq->fetch_assoc()) $news_items[] = $nr;
 </tr>
 <?php endforeach; ?>
 </table>
+</div>
+
+<!-- Tile view -->
+<div id="home-view-tile" style="display:none;">
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;">
+<?php foreach ($recent_parts as $rp):
+    $thumb = parts_first_photo((int)$rp['id']);
+?>
+<a href="index.php?navigate=viewpart&id=<?= (int)$rp['id'] ?>"
+   style="display:block;border:1px solid var(--color-content-border);border-radius:6px;
+          overflow:hidden;text-decoration:none;color:inherit;background:var(--color-surface);
+          transition:box-shadow .15s;" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.15)'"
+   onmouseout="this.style.boxShadow='none'">
+    <?php if ($thumb): ?>
+    <img src="<?= htmlspecialchars($thumb) ?>" alt=""
+         style="width:100%;height:110px;object-fit:cover;display:block;" />
+    <?php else: ?>
+    <div style="width:100%;height:110px;background:var(--color-input-bg);
+                display:flex;align-items:center;justify-content:center;font-size:28px;">&#128295;</div>
+    <?php endif; ?>
+    <div style="padding:7px 9px;">
+        <div style="font-size:12px;font-weight:bold;line-height:1.3;margin-bottom:3px;
+                    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><?= htmlspecialchars($rp['title']) ?></div>
+        <div style="font-size:11px;color:#888;margin-bottom:2px;">
+            <?= htmlspecialchars($rp['make_name']) ?><?= $rp['model_name'] ? ' &mdash; ' . htmlspecialchars($rp['model_name']) : '' ?>
+        </div>
+        <div style="font-size:12px;font-weight:bold;color:var(--color-accent);">
+            <?= $rp['price'] !== null ? '&euro;' . number_format((float)$rp['price'], 2, ',', '.') : '<span style="font-size:11px;color:#888;font-weight:normal;">On request</span>' ?>
+        </div>
+    </div>
+</a>
+<?php endforeach; ?>
+</div>
+</div>
+
 </div>
 <?php endif; ?>
 
@@ -243,5 +309,28 @@ if ($nq) while ($nr = $nq->fetch_assoc()) $news_items[] = $nr;
     <?= $ni['body'] ?>
 </div>
 <?php endforeach; ?>
+
+<script>
+var _homeLoggedIn = <?= $uid > 0 ? 'true' : 'false' ?>;
+var _homeView     = '<?= htmlspecialchars($browse_view) ?>';
+
+function homeSetView(v) {
+    _homeView = v;
+    document.getElementById('home-view-list').style.display = (v === 'list') ? '' : 'none';
+    document.getElementById('home-view-tile').style.display = (v === 'tile') ? '' : 'none';
+    document.getElementById('home-btn-list').style.fontWeight = (v === 'list') ? 'bold' : 'normal';
+    document.getElementById('home-btn-tile').style.fontWeight = (v === 'tile') ? 'bold' : 'normal';
+    if (_homeLoggedIn) {
+        fetch('index.php?navigate=savebrowseview&ajax=1', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: 'view=' + encodeURIComponent(v)
+        });
+    } else {
+        document.cookie = 'cpdb_browse_view=' + encodeURIComponent(v) + '; path=/; max-age=' + (365*24*3600) + '; SameSite=Lax';
+    }
+}
+homeSetView(_homeView);
+</script>
 
 <?php mysqli_close($CarpartsConnection); ?>

@@ -253,18 +253,18 @@ $pref_model = isset($_COOKIE['cpdb_last_model']) ? intval($_COOKIE['cpdb_last_mo
     <br>
 
     <label>
-        <input type="checkbox" name="for_sale" value="1" checked />
+        <input type="checkbox" name="for_sale" value="1" />
         <strong>List this part for sale</strong> <small style="color:#666;">(uncheck for display-only items)</small>
     </label><br><br>
 
     <label>
-        <input type="checkbox" name="visible" value="1" checked />
+        <input type="checkbox" name="visible" value="1" />
         <strong>Visible to others</strong> <small style="color:#666;">(uncheck to keep it in your own collection)</small>
     </label><br><br>
 
     <?php if (!empty($_SESSION['isadmin']) || !empty($_SESSION['is_member'])): ?>
     <label>
-        <input type="checkbox" name="visible_private" value="1" />
+        <input type="checkbox" name="visible_private" value="1" checked />
         <strong>Private listing</strong> <small style="color:#666;">(only visible to incrowd members)</small>
     </label><br><br>
     <?php endif; ?>

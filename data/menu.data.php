@@ -7,5 +7,8 @@
 <li><a href="index.php?navigate=address" title="Contact">Contact</a></li>
                          <?php if (!empty($_SESSION['authenticated'])): ?>
                          <li><a href="index.php?navigate=userprofile&id=<?= (int)($_SESSION['user_id'] ?? 0) ?>" title="My profile">My Profile</a></li>
+                         <?php if (!empty($_SESSION['isadmin'])): ?>
+                         <li><a href="index.php?navigate=adminpanel" title="Admin panel">Admin Panel</a></li>
+                         <?php endif; ?>
                          <li><a href="index.php?navigate=logout" title="Log out">Logout</a></li>
                          <?php endif; ?>

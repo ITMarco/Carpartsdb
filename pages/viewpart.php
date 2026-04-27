@@ -221,14 +221,41 @@ $is_sold   = !empty($part['is_sold']);
     </div>
 </div>
 
-<p style="margin-top:16px;">
+<p style="margin-top:16px;display:flex;align-items:center;flex-wrap:wrap;gap:10px;">
     <a href="index.php?navigate=browse">&larr; Back to browse</a>
+    <button id="share-btn" onclick="sharePartLink()"
+            style="padding:4px 12px;font-size:12px;border-radius:3px;cursor:pointer;
+                   border:1px solid var(--color-content-border);background:var(--color-surface);">
+        &#128279; Share
+    </button>
+    <span id="share-copied" style="font-size:12px;color:#2a7a2a;display:none;">&#10003; Link copied!</span>
     <?php if (!empty($_SESSION['authenticated']) && !$is_seller): ?>
-    &nbsp;&nbsp;
     <a href="index.php?navigate=flagpart&id=<?= $id ?>"
-       style="font-size:11px;color:#aaa;" title="Report this listing">&#9873; Report</a>
+       style="font-size:11px;color:#aaa;margin-left:4px;" title="Report this listing">&#9873; Report</a>
     <?php endif; ?>
 </p>
+<script>
+function sharePartLink() {
+    var url = window.location.origin + window.location.pathname + '?navigate=viewpart&id=<?= $id ?>';
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(function() { showCopied(); });
+    } else {
+        var ta = document.createElement('textarea');
+        ta.value = url;
+        ta.style.cssText = 'position:fixed;top:-9999px;left:-9999px;';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        showCopied();
+    }
+}
+function showCopied() {
+    var el = document.getElementById('share-copied');
+    el.style.display = 'inline';
+    setTimeout(function() { el.style.display = 'none'; }, 2500);
+}
+</script>
 </div>
 
 <!-- Q&A / Messages section -->
