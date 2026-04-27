@@ -4,13 +4,22 @@ if (empty($_SESSION['authenticated'])) {
     exit();
 }
 
+// State-changing action — must be POST with valid CSRF token
+if ($_SERVER['REQUEST_METHOD'] !== 'POST'
+    || !isset($_POST['csrf_token'], $_SESSION['csrf_token'])
+    || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+    http_response_code(405);
+    echo "<div class='content-box'><p style='color:red;'>Invalid request.</p></div>";
+    return;
+}
+
 include 'connection.php';
 include_once 'parts_helper.php';
 
 parts_ensure_table($CarpartsConnection);
 
-$id   = isset($_GET['id']) ? intval($_GET['id']) : 0;
-$undo = !empty($_GET['undo']);
+$id   = isset($_POST['id'])   ? intval($_POST['id'])   : 0;
+$undo = !empty($_POST['undo']);
 
 if ($id <= 0) {
     mysqli_close($CarpartsConnection);

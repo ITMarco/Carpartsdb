@@ -146,10 +146,12 @@ mysqli_close($CarpartsConnection);
         <strong>Visible to others</strong> <small style="color:#666;">(uncheck to keep it in your own collection)</small>
     </label><br><br>
 
+    <?php if (!empty($_SESSION['isadmin']) || !empty($_SESSION['is_member'])): ?>
     <label>
         <input type="checkbox" name="visible_private" value="1" <?= ($part['visible_private']) ? 'checked' : '' ?> />
-        <strong>Private listing</strong> <small style="color:#666;">(incrowd only)</small>
+        <strong>Private listing</strong> <small style="color:#666;">(only visible to incrowd members)</small>
     </label><br><br>
+    <?php endif; ?>
 
     <input type="submit" value="Save changes" class="btn" style="padding:9px 24px;" />
     <a href="index.php?navigate=viewpart&id=<?= $id ?>" style="padding:9px 18px;margin-left:10px;">Cancel</a>
@@ -158,13 +160,22 @@ mysqli_close($CarpartsConnection);
 <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--color-content-border);display:flex;gap:10px;flex-wrap:wrap;">
     <?php $is_sold = !empty($part['is_sold']); ?>
     <?php if (!$is_sold): ?>
-    <a href="index.php?navigate=markpartsold&id=<?= $id ?>"
-       style="padding:7px 16px;background:#c87020;color:#fff;text-decoration:none;border-radius:3px;font-size:13px;"
-       onclick="return confirm('Mark this part as sold? It will be hidden from public listings.');">Mark as sold</a>
+    <form method="post" action="index.php?navigate=markpartsold" style="display:inline;"
+          onsubmit="return confirm('Mark this part as sold? It will be hidden from public listings.');">
+        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>" />
+        <input type="hidden" name="id" value="<?= $id ?>" />
+        <input type="submit" value="Mark as sold"
+               style="padding:7px 16px;background:#c87020;color:#fff;border:none;cursor:pointer;border-radius:3px;font-size:13px;" />
+    </form>
     <?php else: ?>
-    <a href="index.php?navigate=markpartsold&id=<?= $id ?>&undo=1"
-       style="padding:7px 16px;background:#5588bb;color:#fff;text-decoration:none;border-radius:3px;font-size:13px;"
-       onclick="return confirm('Re-list this part as available?');">Re-list (undo sold)</a>
+    <form method="post" action="index.php?navigate=markpartsold" style="display:inline;"
+          onsubmit="return confirm('Re-list this part as available?');">
+        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>" />
+        <input type="hidden" name="id" value="<?= $id ?>" />
+        <input type="hidden" name="undo" value="1" />
+        <input type="submit" value="Re-list (undo sold)"
+               style="padding:7px 16px;background:#5588bb;color:#fff;border:none;cursor:pointer;border-radius:3px;font-size:13px;" />
+    </form>
     <?php endif; ?>
     <a href="index.php?navigate=deletepart&id=<?= $id ?>"
        style="padding:7px 16px;background:#dc3545;color:#fff;text-decoration:none;border-radius:3px;font-size:13px;"

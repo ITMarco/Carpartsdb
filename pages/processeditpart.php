@@ -53,7 +53,8 @@ $stock       = max(1, intval($_POST['stock'] ?? 1));
 $oem         = trim($_POST['oem_number'] ?? '') ?: null;
 $replacement = trim($_POST['replacement_number'] ?? '') ?: null;
 $description = trim($_POST['description'] ?? '') ?: null;
-$visible_prv = (isset($_POST['visible_private']) && $_POST['visible_private'] == '1') ? 1 : 0;
+$can_set_private = !empty($_SESSION['isadmin']) || !empty($_SESSION['is_member']);
+$visible_prv = ($can_set_private && isset($_POST['visible_private']) && $_POST['visible_private'] == '1') ? 1 : 0;
 $visible     = (isset($_POST['visible']) && $_POST['visible'] == '1') ? 1 : 0;
 $for_sale    = (isset($_POST['for_sale']) && $_POST['for_sale'] == '1') ? 1 : 0;
 

@@ -37,16 +37,26 @@ if ($new_id > 0 && $new_part) {
 <p style="color:#2a7a2a;font-weight:bold;">&#10003; <strong><?= htmlspecialchars($new_part['title']) ?></strong> has been listed.</p>
 
 <h4 style="margin-top:18px;">Add photos</h4>
-<p style="font-size:12px;color:#666;">Drag &amp; drop images here, or tap/click to select. JPG, PNG, GIF, WebP &mdash; max 1.5 MB each.</p>
-
 <div id="drop-zone"
-     style="border:2px dashed var(--color-content-border);border-radius:8px;padding:30px 20px;
-            text-align:center;cursor:pointer;background:var(--color-surface);transition:background .15s;
-            min-height:100px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;">
-    <div style="font-size:32px;">📷</div>
-    <div style="font-size:14px;color:var(--color-accent);">Drop images here or <span style="text-decoration:underline;">click to choose</span></div>
-    <input type="file" id="photo-input" name="photo" accept="image/*" multiple
-           style="display:none;" />
+     style="border:2px dashed var(--color-content-border);border-radius:8px;padding:24px 20px;
+            text-align:center;background:var(--color-surface);transition:background .15s;">
+    <div style="font-size:28px;margin-bottom:8px;">&#128247;</div>
+    <div style="font-size:13px;color:var(--color-accent);margin-bottom:10px;">
+        Drop photos here, or choose:
+    </div>
+    <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+        <button type="button" onclick="document.getElementById('photo-gallery').click()"
+                style="padding:6px 14px;font-size:13px;border-radius:3px;cursor:pointer;border:1px solid var(--color-content-border);">
+            &#128193; Gallery
+        </button>
+        <button type="button" onclick="document.getElementById('photo-camera').click()"
+                style="padding:6px 14px;font-size:13px;border-radius:3px;cursor:pointer;border:1px solid var(--color-content-border);">
+            &#128247; Camera
+        </button>
+    </div>
+    <input type="file" id="photo-gallery" name="photo" accept="image/*" multiple style="display:none;" />
+    <input type="file" id="photo-camera"  name="photo" accept="image/*" capture="environment" style="display:none;" />
+    <div style="font-size:11px;color:#aaa;margin-top:10px;">JPG, PNG, GIF, WebP &mdash; max 1.5 MB each</div>
 </div>
 
 <div id="upload-progress" style="margin-top:10px;font-size:12px;"></div>
@@ -72,16 +82,17 @@ if ($new_id > 0 && $new_part) {
     var partId  = <?= $new_id ?>;
     var csrf    = '<?= $csrf ?>';
     var zone    = document.getElementById('drop-zone');
-    var input   = document.getElementById('photo-input');
+    var gallery = document.getElementById('photo-gallery');
+    var camera  = document.getElementById('photo-camera');
     var prog    = document.getElementById('upload-progress');
     var wrap    = document.getElementById('photo-grid-wrap');
     var grid    = document.getElementById('photo-grid');
 
-    zone.addEventListener('click',   function() { input.click(); });
     zone.addEventListener('dragover', function(e) { e.preventDefault(); zone.style.background='var(--color-input-bg)'; });
     zone.addEventListener('dragleave',function()  { zone.style.background='var(--color-surface)'; });
     zone.addEventListener('drop',    function(e)  { e.preventDefault(); zone.style.background='var(--color-surface)'; uploadFiles(e.dataTransfer.files); });
-    input.addEventListener('change', function()   { uploadFiles(this.files); this.value=''; });
+    gallery.addEventListener('change', function() { uploadFiles(this.files); this.value=''; });
+    camera.addEventListener('change',  function() { uploadFiles(this.files); this.value=''; });
 
     function uploadFiles(files) {
         Array.from(files).forEach(uploadOne);

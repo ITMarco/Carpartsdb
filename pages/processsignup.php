@@ -23,7 +23,7 @@ if (!empty($_POST['website'])) {
 }
 
 // ── Collect & validate ────────────────────────────────────────────────────────
-$realname  = trim($_POST['realname']  ?? '');
+$realname  = str_replace(["\r", "\n"], ' ', trim($_POST['realname']  ?? ''));
 $email     = strtolower(trim($_POST['email']     ?? ''));
 $password  = $_POST['password']  ?? '';
 $password2 = $_POST['password2'] ?? '';

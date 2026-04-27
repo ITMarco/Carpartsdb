@@ -1,24 +1,23 @@
 <?php
 // Handles both:
-//   POST  action=send  — submit a question/bid
-//   GET   action=delete — admin/seller deletes a message
+//   POST  action=send   — submit a question/bid
+//   POST  action=delete — admin/seller deletes a message (CSRF token in POST body)
 
 include 'connection.php';
 include_once 'parts_helper.php';
 
 parts_ensure_table($CarpartsConnection);
 
-$action = $_GET['action'] ?? ($_POST['action'] ?? 'send');
+$action = $_POST['action'] ?? 'send';
 
 // ── Delete a message ──────────────────────────────────────────────────────────
 if ($action === 'delete') {
-    $msg_id  = intval($_GET['id'] ?? 0);
-    $part_id = intval($_GET['part_id'] ?? 0);
-    $csrf    = $_GET['csrf'] ?? '';
+    $msg_id  = intval($_POST['id']      ?? 0);
+    $part_id = intval($_POST['part_id'] ?? 0);
 
     if (empty($_SESSION['authenticated'])
-        || !isset($_SESSION['csrf_token'])
-        || !hash_equals($_SESSION['csrf_token'], $csrf)) {
+        || !isset($_POST['csrf_token'], $_SESSION['csrf_token'])
+        || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
         mysqli_close($CarpartsConnection);
         echo "<div class='content-box'><p style='color:red;'>Access denied.</p></div>";
         return;

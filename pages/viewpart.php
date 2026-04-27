@@ -55,7 +55,10 @@ if ($mq) {
 
 // Increment view counter — skip for the seller and admins
 if (!$is_seller && empty($_SESSION['isadmin'])) {
-    $CarpartsConnection->query("UPDATE `PARTS` SET `view_count` = `view_count` + 1 WHERE `id` = {$id}");
+    $vc = $CarpartsConnection->prepare("UPDATE `PARTS` SET `view_count` = `view_count` + 1 WHERE `id` = ?");
+    $vc->bind_param('i', $id);
+    $vc->execute();
+    $vc->close();
 }
 
 $photos = parts_photos($id);
@@ -285,13 +288,22 @@ $show_amayama = in_array(strtolower($part['make_name']), $_amayama_makes, true);
         <p style="margin-top:14px;">
             <a href="index.php?navigate=editpart&id=<?= $id ?>" class="btn" style="padding:6px 14px;">Edit full listing</a>
             <?php if (!$is_sold): ?>
-            <a href="index.php?navigate=markpartsold&id=<?= $id ?>"
-               style="padding:6px 14px;background:#c87020;color:#fff;text-decoration:none;border-radius:3px;margin-left:8px;font-size:13px;"
-               onclick="return confirm('Mark this part as sold? It will be hidden from public listings.');">Mark as sold</a>
+            <form method="post" action="index.php?navigate=markpartsold" style="display:inline;margin-left:8px;"
+                  onsubmit="return confirm('Mark this part as sold? It will be hidden from public listings.');">
+                <input type="hidden" name="csrf_token" value="<?= $csrf ?>" />
+                <input type="hidden" name="id" value="<?= $id ?>" />
+                <input type="submit" value="Mark as sold"
+                       style="padding:6px 14px;background:#c87020;color:#fff;border:none;cursor:pointer;border-radius:3px;font-size:13px;" />
+            </form>
             <?php else: ?>
-            <a href="index.php?navigate=markpartsold&id=<?= $id ?>&undo=1"
-               style="padding:6px 14px;background:#5588bb;color:#fff;text-decoration:none;border-radius:3px;margin-left:8px;font-size:13px;"
-               onclick="return confirm('Re-list this part as available?');">Re-list</a>
+            <form method="post" action="index.php?navigate=markpartsold" style="display:inline;margin-left:8px;"
+                  onsubmit="return confirm('Re-list this part as available?');">
+                <input type="hidden" name="csrf_token" value="<?= $csrf ?>" />
+                <input type="hidden" name="id" value="<?= $id ?>" />
+                <input type="hidden" name="undo" value="1" />
+                <input type="submit" value="Re-list"
+                       style="padding:6px 14px;background:#5588bb;color:#fff;border:none;cursor:pointer;border-radius:3px;font-size:13px;" />
+            </form>
             <?php endif; ?>
             <a href="index.php?navigate=deletepart&id=<?= $id ?>"
                style="padding:6px 14px;background:#dc3545;color:#fff;text-decoration:none;border-radius:3px;margin-left:8px;font-size:13px;"
@@ -330,9 +342,15 @@ $show_amayama = in_array(strtolower($part['make_name']), $_amayama_makes, true);
     <div style="font-size:13px;line-height:1.5;"><?= nl2br(htmlspecialchars($msg['message'])) ?></div>
     <?php if ($can_edit): ?>
     <div style="margin-top:6px;">
-        <a href="index.php?navigate=processpartmessage&action=delete&id=<?= (int)$msg['id'] ?>&part_id=<?= $id ?>&csrf=<?= urlencode($_SESSION['csrf_token']) ?>"
-           style="font-size:11px;color:#c04040;"
-           onclick="return confirm('Delete this message?');">Delete</a>
+        <form method="post" action="index.php?navigate=processpartmessage" style="display:inline;"
+              onsubmit="return confirm('Delete this message?');">
+            <input type="hidden" name="csrf_token" value="<?= $csrf ?>" />
+            <input type="hidden" name="action"     value="delete" />
+            <input type="hidden" name="id"         value="<?= (int)$msg['id'] ?>" />
+            <input type="hidden" name="part_id"    value="<?= $id ?>" />
+            <input type="submit" value="Delete"
+                   style="font-size:11px;color:#c04040;background:none;border:none;cursor:pointer;padding:0;" />
+        </form>
     </div>
     <?php endif; ?>
 </div>
@@ -379,9 +397,9 @@ if ($msg_sent): ?>
 </div>
 
 <?php if (!empty($related)): ?>
-<!-- Related parts (same make) -->
+<!-- Related parts -->
 <div class="content-box">
-<h3>More <?= htmlspecialchars($part['make_name']) ?> parts</h3>
+<h3>You might be interested in</h3>
 <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;">
 <?php foreach ($related as $rp):
     $rthumb = parts_first_photo((int)$rp['id']);

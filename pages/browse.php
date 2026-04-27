@@ -100,7 +100,15 @@ if ($stmt) {
     $stmt->close();
 }
 
-$makes       = makes_list($CarpartsConnection);
+// Only show makes that have at least one visible part
+$_mq   = $CarpartsConnection->query(
+    "SELECT DISTINCT m.`id`, m.`name` FROM `CAR_MAKES` m
+     INNER JOIN `PARTS` p ON p.`make_id` = m.`id`
+     WHERE p.`visible` = 1 AND p.`is_sold` = 0
+     ORDER BY m.`name` ASC"
+);
+$makes = [];
+if ($_mq) while ($r = $_mq->fetch_assoc()) $makes[(int)$r['id']] = $r['name'];
 $models_json = makes_all_models_json($CarpartsConnection);
 
 // Batch-fetch "also fits" makes for displayed parts
