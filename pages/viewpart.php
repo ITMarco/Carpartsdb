@@ -84,6 +84,13 @@ $is_seller = isset($_SESSION['user_id']) && (int)$_SESSION['user_id'] === (int)$
 $can_edit  = $is_seller || !empty($_SESSION['isadmin']);
 $is_sold   = !empty($part['is_sold']);
 $csrf      = htmlspecialchars($_SESSION['csrf_token']);
+
+// Amayama: supported makes — Toyota, Nissan, Lexus, Infiniti, Mitsubishi, Honda, Mazda,
+//          Subaru, Suzuki, BMW, Mercedes, SEAT, Volkswagen, Skoda
+$_amayama_makes = ['toyota','nissan','lexus','infiniti','infinity','mitsubishi','honda',
+                   'mazda','subaru','suzuki','bmw','mercedes','mercedes-benz',
+                   'seat','volkswagen','vw','skoda','škoda'];
+$show_amayama = in_array(strtolower($part['make_name']), $_amayama_makes, true);
 ?>
 
 <div class="content-box">
@@ -207,12 +214,32 @@ $csrf      = htmlspecialchars($_SESSION['csrf_token']);
                 </td>
             </tr>
             <?php if (!empty($part['oem_number'])): ?>
-            <tr><td style="padding:5px 12px 5px 0;font-weight:bold;">OEM number:</td>
-                <td style="padding:5px 0;font-family:monospace;"><?= htmlspecialchars($part['oem_number']) ?></td></tr>
+            <tr><td style="padding:5px 12px 5px 0;font-weight:bold;white-space:nowrap;">OEM number:</td>
+                <td style="padding:5px 0;">
+                    <span style="font-family:monospace;"><?= htmlspecialchars($part['oem_number']) ?></span>
+                    <?php if ($show_amayama): ?>
+                    <a href="https://www.amayama.com/en/find?q=<?= urlencode($part['oem_number']) ?>"
+                       target="_blank" rel="noopener"
+                       style="display:inline-block;margin-left:8px;padding:2px 8px;font-size:11px;
+                              background:#e8f0f8;border:1px solid #b0c8e0;border-radius:3px;
+                              color:#2255aa;text-decoration:none;vertical-align:middle;white-space:nowrap;"
+                       title="Search Amayama parts catalogue">Amayama &#8599;</a>
+                    <?php endif; ?>
+                </td></tr>
             <?php endif; ?>
             <?php if (!empty($part['replacement_number'])): ?>
-            <tr><td style="padding:5px 12px 5px 0;font-weight:bold;">Replacement OEM:</td>
-                <td style="padding:5px 0;font-family:monospace;"><?= htmlspecialchars($part['replacement_number']) ?></td></tr>
+            <tr><td style="padding:5px 12px 5px 0;font-weight:bold;white-space:nowrap;">Replacement OEM:</td>
+                <td style="padding:5px 0;">
+                    <span style="font-family:monospace;"><?= htmlspecialchars($part['replacement_number']) ?></span>
+                    <?php if ($show_amayama): ?>
+                    <a href="https://www.amayama.com/en/find?q=<?= urlencode($part['replacement_number']) ?>"
+                       target="_blank" rel="noopener"
+                       style="display:inline-block;margin-left:8px;padding:2px 8px;font-size:11px;
+                              background:#e8f0f8;border:1px solid #b0c8e0;border-radius:3px;
+                              color:#2255aa;text-decoration:none;vertical-align:middle;white-space:nowrap;"
+                       title="Search Amayama parts catalogue">Amayama &#8599;</a>
+                    <?php endif; ?>
+                </td></tr>
             <?php endif; ?>
             <tr><td style="padding:5px 12px 5px 0;font-weight:bold;">Seller:</td>
                 <td style="padding:5px 0;">
@@ -387,22 +414,85 @@ if ($msg_sent): ?>
 <?php endif; ?>
 
 <!-- Lightbox -->
-<div id="lightbox" onclick="this.style.display='none'"
-     style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;
-            background:rgba(0,0,0,0.85);z-index:9999;
-            align-items:center;justify-content:center;cursor:zoom-out;">
-    <img id="lightbox-img" src="" alt="" style="max-width:90%;max-height:90%;object-fit:contain;" />
+<div id="lightbox" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.9);
+     z-index:9999;align-items:center;justify-content:center;">
+    <!-- Backdrop — tap to close -->
+    <div onclick="lbClose()" style="position:absolute;inset:0;cursor:zoom-out;"></div>
+    <!-- Image -->
+    <img id="lightbox-img" src="" alt=""
+         style="position:relative;max-width:90vw;max-height:86vh;object-fit:contain;
+                border-radius:3px;z-index:1;user-select:none;-webkit-user-drag:none;" />
+    <!-- Prev -->
+    <button id="lb-prev" onclick="lbPrev()"
+            style="position:absolute;left:10px;top:50%;transform:translateY(-50%);
+                   background:rgba(255,255,255,0.18);border:none;color:#fff;font-size:26px;
+                   padding:10px 16px;cursor:pointer;border-radius:4px;z-index:2;line-height:1;">&#10094;</button>
+    <!-- Next -->
+    <button id="lb-next" onclick="lbNext()"
+            style="position:absolute;right:10px;top:50%;transform:translateY(-50%);
+                   background:rgba(255,255,255,0.18);border:none;color:#fff;font-size:26px;
+                   padding:10px 16px;cursor:pointer;border-radius:4px;z-index:2;line-height:1;">&#10095;</button>
+    <!-- Counter -->
+    <div id="lb-counter"
+         style="position:absolute;bottom:14px;left:50%;transform:translateX(-50%);
+                color:#fff;font-size:13px;background:rgba(0,0,0,0.5);
+                padding:3px 12px;border-radius:10px;z-index:2;white-space:nowrap;"></div>
+    <!-- Close -->
+    <button onclick="lbClose()"
+            style="position:absolute;top:12px;right:12px;background:rgba(255,255,255,0.18);
+                   border:none;color:#fff;font-size:20px;padding:5px 12px;cursor:pointer;
+                   border-radius:4px;z-index:2;">&times;</button>
 </div>
 
 <script>
-var _partId = <?= $id ?>;
-var _csrf   = '<?= $csrf ?>';
+var _partId  = <?= $id ?>;
+var _csrf    = '<?= $csrf ?>';
+var _photos  = <?= json_encode(array_values($photos)) ?>;
+var _lbIdx   = 0;
+var _lbTouchX = 0;
 
 // ── Lightbox ──────────────────────────────────────────────────────────────────
 function openLightbox(src) {
-    document.getElementById('lightbox-img').src = src;
+    // Match by stripping query strings for comparison
+    var bare = src.split('?')[0];
+    _lbIdx = 0;
+    for (var i = 0; i < _photos.length; i++) {
+        if (_photos[i].split('?')[0] === bare) { _lbIdx = i; break; }
+    }
+    lbShow();
+}
+function lbShow() {
+    document.getElementById('lightbox-img').src = _photos[_lbIdx] + '?t=' + Date.now();
+    document.getElementById('lb-counter').textContent = (_photos.length > 1)
+        ? (_lbIdx + 1) + ' / ' + _photos.length : '';
+    document.getElementById('lb-prev').style.display = (_lbIdx > 0) ? '' : 'none';
+    document.getElementById('lb-next').style.display = (_lbIdx < _photos.length - 1) ? '' : 'none';
     document.getElementById('lightbox').style.display = 'flex';
 }
+function lbPrev() { if (_lbIdx > 0) { _lbIdx--; lbShow(); } }
+function lbNext() { if (_lbIdx < _photos.length - 1) { _lbIdx++; lbShow(); } }
+function lbClose() { document.getElementById('lightbox').style.display = 'none'; }
+
+// Keyboard navigation
+document.addEventListener('keydown', function(e) {
+    if (document.getElementById('lightbox').style.display !== 'flex') return;
+    if (e.key === 'ArrowLeft')  lbPrev();
+    if (e.key === 'ArrowRight') lbNext();
+    if (e.key === 'Escape')     lbClose();
+});
+
+// Touch swipe — track on image only to avoid conflicting with backdrop tap-to-close
+(function() {
+    var img = document.getElementById('lightbox-img');
+    img.addEventListener('touchstart', function(e) {
+        _lbTouchX = e.changedTouches[0].screenX;
+    }, {passive: true});
+    img.addEventListener('touchend', function(e) {
+        var dx = e.changedTouches[0].screenX - _lbTouchX;
+        if (dx < -40) lbNext();
+        else if (dx > 40) lbPrev();
+    }, {passive: true});
+})();
 
 // ── Share ─────────────────────────────────────────────────────────────────────
 function sharePartLink() {
