@@ -256,6 +256,10 @@ $show_amayama = in_array(strtolower($part['make_name']), $_amayama_makes, true);
                 </td></tr>
             <tr><td style="padding:5px 12px 5px 0;font-weight:bold;">Listed:</td>
                 <td style="padding:5px 0;font-size:12px;color:#888;"><?= htmlspecialchars(substr($part['created_at'], 0, 10)) ?></td></tr>
+            <?php if ($can_edit): ?>
+            <tr><td style="padding:5px 12px 5px 0;font-weight:bold;">Views:</td>
+                <td style="padding:5px 0;font-size:12px;color:#888;"><?= number_format((int)($part['view_count'] ?? 0)) ?></td></tr>
+            <?php endif; ?>
         </table>
 
         <?php if (!empty($part['description'])): ?>
