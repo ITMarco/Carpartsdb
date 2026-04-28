@@ -218,9 +218,17 @@ $pref_model = isset($_COOKIE['cpdb_last_model']) ? intval($_COOKIE['cpdb_last_mo
 
     <div style="display:flex;gap:20px;flex-wrap:wrap;">
         <div>
-            <label><strong>Price (€):</strong> <small style="color:#888;font-weight:normal;">leave blank = price on request</small></label><br>
-            <input type="number" name="price" min="0" step="0.01"
-                   style="width:120px;padding:5px;" placeholder="on request" />
+            <label><strong>Price:</strong></label><br>
+            <select name="price_type" id="price_type_sel" onchange="togglePriceInput()" style="padding:5px;">
+                <option value="fixed">Fixed price</option>
+                <option value="request">On request</option>
+                <option value="bid">Make a bid</option>
+            </select>
+            <span id="price_input_wrap" style="margin-left:8px;">
+                <input type="number" name="price" id="price_inp" min="0" step="0.01"
+                       style="width:110px;padding:5px;" placeholder="0.00" />
+                <small style="color:#888;">€</small>
+            </span>
         </div>
         <div>
             <label><strong>Condition: *</strong> <small style="color:#666;">(0 = rubbish, 5 = mint)</small></label><br>
@@ -264,21 +272,25 @@ $pref_model = isset($_COOKIE['cpdb_last_model']) ? intval($_COOKIE['cpdb_last_mo
     <br>
 
     <label>
-        <input type="checkbox" name="for_sale" value="1" />
+        <input type="checkbox" name="for_sale" id="for_sale_cb" value="1" />
         <strong>List this part for sale</strong> <small style="color:#666;">(uncheck for display-only items)</small>
     </label><br><br>
 
-    <label>
-        <input type="checkbox" name="visible" value="1" />
-        <strong>Visible to others</strong> <small style="color:#666;">(uncheck to keep it in your own collection)</small>
-    </label><br><br>
-
-    <?php if (!empty($_SESSION['isadmin']) || !empty($_SESSION['is_member'])): ?>
-    <label>
-        <input type="checkbox" name="visible_private" value="1" checked />
-        <strong>Private listing</strong> <small style="color:#666;">(only visible to incrowd members)</small>
-    </label><br><br>
-    <?php endif; ?>
+    <?php $can_set_private = !empty($_SESSION['isadmin']) || !empty($_SESSION['is_member']); ?>
+    <label><strong>Visibility:</strong></label><br>
+    <select name="visibility" id="visibility_sel" style="padding:5px;min-width:220px;">
+        <?php if ($can_set_private): ?>
+        <option value="private" selected>Private (incrowd members only)</option>
+        <option value="public">Visible to all</option>
+        <option value="hidden">My collection only</option>
+        <?php else: ?>
+        <option value="hidden" selected>My collection only</option>
+        <option value="public">Visible to all</option>
+        <?php endif; ?>
+    </select>
+    <span id="visibility_warn" style="display:none;margin-left:10px;color:#c00;font-weight:bold;">
+        &#9888; A part listed for sale cannot be &ldquo;My collection only&rdquo; &mdash; please change the visibility.
+    </span><br><br>
 
     <input type="submit" value="Save part &amp; add photos" class="btn" style="padding:9px 24px;font-size:15px;" />
     <button type="button" onclick="location.href='index.php?navigate=browse'"
@@ -287,6 +299,13 @@ $pref_model = isset($_COOKIE['cpdb_last_model']) ? intval($_COOKIE['cpdb_last_mo
 </div>
 
 <script>
+function togglePriceInput() {
+    var sel  = document.getElementById('price_type_sel');
+    var wrap = document.getElementById('price_input_wrap');
+    wrap.style.display = sel.value === 'fixed' ? 'inline' : 'none';
+}
+togglePriceInput();
+
 var _models    = <?= $models_json ?>;
 var _prefMake  = <?= $pref_make ?>;
 var _prefModel = <?= $pref_model ?>;
@@ -432,6 +451,27 @@ function quickSelect(makeId, modelId) {
         }
     }
 }
+
+function checkVisibilitySale() {
+    var forSale = document.getElementById('for_sale_cb').checked;
+    var vis     = document.getElementById('visibility_sel');
+    var warn    = document.getElementById('visibility_warn');
+    var invalid = forSale && vis.value === 'hidden';
+    vis.style.outline    = invalid ? '3px solid #c00' : '';
+    vis.style.background = invalid ? '#fff0f0'        : '';
+    warn.style.display   = invalid ? 'inline'         : 'none';
+}
+
+document.getElementById('for_sale_cb').addEventListener('change', checkVisibilitySale);
+document.getElementById('visibility_sel').addEventListener('change', checkVisibilitySale);
+
+document.getElementById('addpart-form').addEventListener('submit', function(e) {
+    if (document.getElementById('for_sale_cb').checked &&
+        document.getElementById('visibility_sel').value === 'hidden') {
+        checkVisibilitySale();
+        e.preventDefault();
+    }
+});
 
 // Pre-populate model dropdown from cookie preference on page load
 if (_prefMake > 0) {

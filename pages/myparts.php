@@ -15,7 +15,7 @@ parts_ensure_table($CarpartsConnection);
 $seller_id = (int)$_SESSION['user_id'];
 
 $stmt = $CarpartsConnection->prepare(
-    "SELECT p.`id`, p.`title`, p.`price`, p.`condition`, p.`year_from`, p.`year_to`,
+    "SELECT p.`id`, p.`title`, p.`price`, p.`price_type`, p.`condition`, p.`year_from`, p.`year_to`,
             p.`stock`, p.`visible`, p.`visible_private`, p.`for_sale`,
             COALESCE(p.`is_sold`,0) AS `is_sold`,
             COALESCE(p.`view_count`,0) AS `view_count`,
@@ -137,7 +137,7 @@ mysqli_close($CarpartsConnection);
         </td>
         <td style="padding:4px 8px;"><?= (int)$p['condition'] ?>/5</td>
         <td style="padding:4px 8px;text-align:center;color:#888;font-size:12px;"><?= number_format((int)$p['view_count']) ?></td>
-        <td style="padding:4px 8px;text-align:right;"><?= $p['price'] !== null ? '&euro;' . number_format((float)$p['price'], 2, ',', '.') : '<span style="color:#888;font-size:11px;">On request</span>' ?></td>
+        <td style="padding:4px 8px;text-align:right;"><?php $mpt=$p['price_type']??'fixed'; echo $mpt==='bid'?'<span style="color:var(--color-accent);font-size:11px;">Make a bid</span>':($p['price']!==null?'&euro;'.number_format((float)$p['price'],2,',','.'):'<span style="color:#888;font-size:11px;">On request</span>'); ?></td>
         <td style="padding:4px 8px;white-space:nowrap;">
             <a href="index.php?navigate=editpart&id=<?= (int)$p['id'] ?>" style="font-size:12px;">Edit</a>
             | <a href="index.php?navigate=deletepartimage&id=<?= (int)$p['id'] ?>" style="font-size:12px;">Photos</a>
@@ -175,7 +175,7 @@ mysqli_close($CarpartsConnection);
                 </div>
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-top:5px;">
                     <span style="font-size:12px;">
-                        <?= $p['price'] !== null ? '&euro;' . number_format((float)$p['price'], 2, ',', '.') : '<span style="color:#888;">On req.</span>' ?>
+                        <?php $mpt=$p['price_type']??'fixed'; echo $mpt==='bid'?'<span style="color:var(--color-accent);font-size:11px;">Bid</span>':($p['price']!==null?'&euro;'.number_format((float)$p['price'],2,',','.'):'<span style="color:#888;">On req.</span>'); ?>
                     </span>
                     <span style="font-size:11px;color:#888;" title="Views">&#128065; <?= number_format((int)$p['view_count']) ?></span>
                 </div>

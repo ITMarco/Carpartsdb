@@ -28,15 +28,23 @@ $make_id     = intval($_POST['make_id'] ?? 0);
 $model_id    = intval($_POST['model_id'] ?? 0) ?: null;
 $year_from   = intval($_POST['year_from'] ?? 0);
 $year_to     = intval($_POST['year_to'] ?? 0) ?: null;
+$price_type  = in_array($_POST['price_type'] ?? '', ['fixed','request','bid']) ? $_POST['price_type'] : 'fixed';
 $price_raw   = trim($_POST['price'] ?? '');
-$price       = ($price_raw !== '') ? round(floatval($price_raw), 2) : null;
+$price       = ($price_type === 'fixed' && $price_raw !== '') ? round(floatval($price_raw), 2) : null;
 $condition   = max(0, min(5, intval($_POST['condition'] ?? 3)));
 $stock       = max(1, intval($_POST['stock'] ?? 1));
 $oem         = trim($_POST['oem_number'] ?? '') ?: null;
 $replacement = trim($_POST['replacement_number'] ?? '') ?: null;
 $description = trim($_POST['description'] ?? '') ?: null;
-$visible_prv = (isset($_POST['visible_private']) && $_POST['visible_private'] == '1') ? 1 : 0;
-$visible     = (isset($_POST['visible']) && $_POST['visible'] == '1') ? 1 : 0;
+$can_set_private = !empty($_SESSION['isadmin']) || !empty($_SESSION['is_member']);
+$vis_val = $_POST['visibility'] ?? ($can_set_private ? 'private' : 'hidden');
+if ($vis_val === 'public') {
+    $visible = 1; $visible_prv = 0;
+} elseif ($vis_val === 'private' && $can_set_private) {
+    $visible = 0; $visible_prv = 1;
+} else {
+    $visible = 0; $visible_prv = 0;
+}
 $for_sale    = (isset($_POST['for_sale']) && $_POST['for_sale'] == '1') ? 1 : 0;
 $seller_id   = (int)$_SESSION['user_id'];
 
@@ -72,14 +80,13 @@ if ($year_to !== null && $year_to < $year_from) {
 $stmt = $CarpartsConnection->prepare(
     "INSERT INTO `PARTS`
         (`seller_id`,`make_id`,`model_id`,`title`,`description`,`year_from`,`year_to`,
-         `price`,`condition`,`stock`,`oem_number`,`replacement_number`,`visible`,`visible_private`,`for_sale`)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+         `price`,`price_type`,`condition`,`stock`,`oem_number`,`replacement_number`,`visible`,`visible_private`,`for_sale`)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
 );
-// price can be NULL — use 'd' type (mysqli sends NULL correctly for null float)
 $stmt->bind_param(
-    'iiissiiidissiii',
+    'iiissiidsiissiii',
     $seller_id, $make_id, $model_id, $title, $description,
-    $year_from, $year_to, $price, $condition, $stock,
+    $year_from, $year_to, $price, $price_type, $condition, $stock,
     $oem, $replacement, $visible, $visible_prv, $for_sale
 );
 
@@ -112,7 +119,8 @@ if ($stmt->execute()) {
     mysqli_close($CarpartsConnection);
 
     // Redirect to photo-upload step on addpart page
-    header("Location: index.php?navigate=addpart&new={$new_id}");
+    echo "<div class='content-box'><p>Part saved. <a href='index.php?navigate=addpart&amp;new={$new_id}'>Continue to photo upload &rarr;</a></p>"
+         . "<script>window.location.replace('index.php?navigate=addpart&new={$new_id}');</script></div>";
     exit();
 } else {
     echo "<div class='content-box'><p style='color:red;'>Error saving part: "

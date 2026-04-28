@@ -57,9 +57,9 @@ $filter_sort = isset($_GET['sort']) && array_key_exists($_GET['sort'], $sort_map
     ? $_GET['sort'] : 'date';
 $filter_dir  = isset($_GET['dir']) && $_GET['dir'] === 'asc' ? 'asc' : 'desc';
 
-// Price ASC: put "on request" (NULL) at the end
+// Price ASC: put "on request" and "make a bid" (non-fixed) at the end
 if ($filter_sort === 'price' && $filter_dir === 'asc') {
-    $order_by = 'CASE WHEN p.`price` IS NULL THEN 1 ELSE 0 END, p.`price` ASC';
+    $order_by = "CASE WHEN p.`price_type` = 'fixed' THEN 0 ELSE 1 END, p.`price` ASC";
 } else {
     $order_by = $sort_map[$filter_sort] . ' ' . strtoupper($filter_dir);
 }
@@ -121,7 +121,7 @@ if ($page > $total_pages) $page = $total_pages;
 // Fetch page
 $parts = [];
 $stmt  = $CarpartsConnection->prepare(
-    "SELECT p.`id`, p.`title`, p.`price`, p.`condition`, p.`year_from`, p.`year_to`,
+    "SELECT p.`id`, p.`title`, p.`price`, p.`price_type`, p.`condition`, p.`year_from`, p.`year_to`,
             p.`stock`, p.`oem_number`, p.`visible_private`, p.`for_sale`, p.`created_at`,
             m.`name` AS make_name, mo.`name` AS model_name
      {$base_sql}
@@ -369,7 +369,7 @@ updateModels();
     <td style="padding:4px 8px;white-space:nowrap;"><?= (int)$p['year_from'] ?><?= $p['year_to'] ? '&ndash;' . (int)$p['year_to'] : '' ?></td>
     <td style="padding:4px 8px;"><?= (int)$p['condition'] ?>/5</td>
     <td style="padding:4px 8px;"><?= (int)$p['stock'] ?></td>
-    <td style="padding:4px 8px;text-align:right;font-weight:bold;"><?= $p['price'] !== null ? '&euro;' . number_format((float)$p['price'], 2, ',', '.') : '<span style="color:#888;font-weight:normal;font-size:11px;">On request</span>' ?></td>
+    <td style="padding:4px 8px;text-align:right;font-weight:bold;"><?php $bpt=$p['price_type']??'fixed'; echo $bpt==='bid'?'<span style="color:var(--color-accent);font-size:12px;">Make a bid</span>':($p['price']!==null?'&euro;'.number_format((float)$p['price'],2,',','.'):'<span style="color:#888;font-weight:normal;font-size:11px;">On request</span>'); ?></td>
 </tr>
 <?php endforeach; ?>
 </table>
@@ -404,7 +404,7 @@ updateModels();
         <div style="font-size:10px;color:#aaa;margin-bottom:2px;">Also: <?= htmlspecialchars($compat_makes[$p['id']]) ?></div>
         <?php endif; ?>
         <div style="font-size:13px;font-weight:bold;color:var(--color-accent);">
-            <?= $p['price'] !== null ? '&euro;' . number_format((float)$p['price'], 2, ',', '.') : '<span style="font-size:11px;color:#888;font-weight:normal;">On request</span>' ?>
+            <?php $bpt=$p['price_type']??'fixed'; echo $bpt==='bid'?'<span style="font-size:11px;color:var(--color-accent);">Make a bid</span>':($p['price']!==null?'&euro;'.number_format((float)$p['price'],2,',','.'):'<span style="font-size:11px;color:#888;font-weight:normal;">On request</span>'); ?>
         </div>
         <div style="font-size:11px;color:#aaa;margin-top:2px;"><?= sprintf('PART-%05d', $p['id']) ?></div>
     </div>

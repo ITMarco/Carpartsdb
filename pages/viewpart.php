@@ -118,7 +118,7 @@ if (!$is_seller && empty($_SESSION['isadmin']) && isset($part['seller_id'])) {
 // Related parts — same make, different part, visible, not sold, max 4
 $related = [];
 $rq = $CarpartsConnection->prepare(
-    "SELECT p.`id`, p.`title`, p.`price`, m.`name` AS make_name, mo.`name` AS model_name
+    "SELECT p.`id`, p.`title`, p.`price`, p.`price_type`, m.`name` AS make_name, mo.`name` AS model_name
      FROM `PARTS` p
      JOIN `CAR_MAKES` m ON m.`id` = p.`make_id`
      LEFT JOIN `CAR_MODELS` mo ON mo.`id` = p.`model_id`
@@ -227,7 +227,11 @@ $show_amayama = in_array(strtolower($part['make_name']), $_amayama_makes, true);
             <tr>
                 <td style="padding:5px 12px 5px 0;font-weight:bold;white-space:nowrap;">Price:</td>
                 <td style="padding:5px 0;font-size:20px;font-weight:bold;color:var(--color-accent);" id="field-price">
-                    <?php if ($part['price'] !== null): ?>
+                    <?php
+                    $pt = $part['price_type'] ?? 'fixed';
+                    if ($pt === 'bid'): ?>
+                    <span style="font-size:15px;color:var(--color-accent);">Make a bid</span>
+                    <?php elseif ($part['price'] !== null): ?>
                     &euro;<?= number_format((float)$part['price'], 2, ',', '.') ?>
                     <?php else: ?><span style="font-size:14px;color:#888;font-weight:normal;">On request</span><?php endif; ?>
                     <?php if ($is_sold): ?><span style="font-size:13px;color:#c04040;"> &mdash; sold</span><?php endif; ?>
@@ -553,7 +557,9 @@ function toggleReplyForm(id) {
             <?= htmlspecialchars($rp['title']) ?>
         </div>
         <div style="font-size:12px;color:var(--color-accent);font-weight:bold;margin-top:2px;">
-            <?= $rp['price'] !== null ? '&euro;' . number_format((float)$rp['price'], 2, ',', '.') : '<span style="font-size:11px;color:#888;font-weight:normal;">On request</span>' ?>
+            <?php $rpt = $rp['price_type'] ?? 'fixed';
+                  echo $rpt === 'bid' ? '<span style="font-size:11px;color:var(--color-accent);">Make a bid</span>'
+                     : ($rp['price'] !== null ? '&euro;' . number_format((float)$rp['price'], 2, ',', '.') : '<span style="font-size:11px;color:#888;font-weight:normal;">On request</span>'); ?>
         </div>
     </div>
 </a>

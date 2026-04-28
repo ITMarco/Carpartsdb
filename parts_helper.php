@@ -159,6 +159,14 @@ function parts_ensure_table(mysqli $db): void {
         $db->query("ALTER TABLE `PARTS` MODIFY COLUMN `price` DECIMAL(10,2) NULL DEFAULT NULL");
     }
 
+    // price_type: 'fixed' | 'request' | 'bid'
+    $r = $db->query("SHOW COLUMNS FROM `PARTS` LIKE 'price_type'");
+    if ($r && $r->num_rows === 0) {
+        $db->query("ALTER TABLE `PARTS` ADD COLUMN `price_type` VARCHAR(10) NOT NULL DEFAULT 'fixed'
+            COMMENT 'fixed=specific price, request=on request, bid=make a bid' AFTER `price`");
+        $db->query("UPDATE `PARTS` SET `price_type` = 'request' WHERE `price` IS NULL");
+    }
+
     // PART_FLAGS — abuse/spam reports
     $db->query("CREATE TABLE IF NOT EXISTS `PART_FLAGS` (
         `id`         INT          NOT NULL AUTO_INCREMENT,
@@ -320,7 +328,7 @@ function parts_get(mysqli $db, int $id, bool $include_hidden = false): ?array {
     $vis = $include_hidden ? '' : " AND p.`visible` = 1";
     $stmt = $db->prepare(
         "SELECT p.`id`, p.`seller_id`, p.`make_id`, p.`model_id`, p.`title`, p.`description`,
-                p.`year_from`, p.`year_to`, p.`price`, p.`condition`, p.`stock`,
+                p.`year_from`, p.`year_to`, p.`price`, p.`price_type`, p.`condition`, p.`stock`,
                 p.`oem_number`, p.`replacement_number`, p.`visible`, p.`visible_private`,
                 p.`for_sale`, p.`photo_dir`, p.`is_sold`, p.`view_count`, p.`created_at`, p.`updated_at`,
                 m.`name` AS make_name, mo.`name` AS model_name,

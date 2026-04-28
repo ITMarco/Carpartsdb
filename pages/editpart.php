@@ -91,10 +91,18 @@ mysqli_close($CarpartsConnection);
 
     <div style="display:flex;gap:20px;flex-wrap:wrap;">
         <div>
-            <label><strong>Price (€):</strong> <small style="color:#888;font-weight:normal;">leave blank = price on request</small></label><br>
-            <input type="number" name="price" min="0" step="0.01"
-                   style="width:120px;padding:5px;" placeholder="on request"
-                   value="<?= $part['price'] !== null ? number_format((float)$part['price'], 2, '.', '') : '' ?>" />
+            <label><strong>Price:</strong></label><br>
+            <select name="price_type" id="price_type_sel" onchange="togglePriceInput()" style="padding:5px;">
+                <option value="fixed"   <?= ($part['price_type'] ?? 'fixed') === 'fixed'   ? 'selected' : '' ?>>Fixed price</option>
+                <option value="request" <?= ($part['price_type'] ?? 'fixed') === 'request' ? 'selected' : '' ?>>On request</option>
+                <option value="bid"     <?= ($part['price_type'] ?? 'fixed') === 'bid'     ? 'selected' : '' ?>>Make a bid</option>
+            </select>
+            <span id="price_input_wrap" style="<?= ($part['price_type'] ?? 'fixed') !== 'fixed' ? 'display:none;' : '' ?>margin-left:8px;">
+                <input type="number" name="price" id="price_inp" min="0" step="0.01"
+                       style="width:110px;padding:5px;" placeholder="0.00"
+                       value="<?= $part['price'] !== null ? number_format((float)$part['price'], 2, '.', '') : '' ?>" />
+                <small style="color:#888;">€</small>
+            </span>
         </div>
         <div>
             <label><strong>Condition:</strong></label><br>
@@ -137,21 +145,27 @@ mysqli_close($CarpartsConnection);
     <br>
 
     <label>
-        <input type="checkbox" name="for_sale" value="1" <?= ($part['for_sale']) ? 'checked' : '' ?> />
+        <input type="checkbox" name="for_sale" id="for_sale_cb" value="1" <?= ($part['for_sale']) ? 'checked' : '' ?> />
         <strong>List this part for sale</strong> <small style="color:#666;">(uncheck for display-only items)</small>
     </label><br><br>
 
-    <label>
-        <input type="checkbox" name="visible" value="1" <?= ($part['visible']) ? 'checked' : '' ?> />
-        <strong>Visible to others</strong> <small style="color:#666;">(uncheck to keep it in your own collection)</small>
-    </label><br><br>
-
-    <?php if (!empty($_SESSION['isadmin']) || !empty($_SESSION['is_member'])): ?>
-    <label>
-        <input type="checkbox" name="visible_private" value="1" <?= ($part['visible_private']) ? 'checked' : '' ?> />
-        <strong>Private listing</strong> <small style="color:#666;">(only visible to incrowd members)</small>
-    </label><br><br>
-    <?php endif; ?>
+    <?php
+    $can_set_private = !empty($_SESSION['isadmin']) || !empty($_SESSION['is_member']);
+    if ($part['visible_private']) $current_vis = 'private';
+    elseif ($part['visible'])     $current_vis = 'public';
+    else                          $current_vis = 'hidden';
+    ?>
+    <label><strong>Visibility:</strong></label><br>
+    <select name="visibility" id="visibility_sel" style="padding:5px;min-width:220px;">
+        <?php if ($can_set_private): ?>
+        <option value="private" <?= $current_vis === 'private' ? 'selected' : '' ?>>Private (incrowd members only)</option>
+        <?php endif; ?>
+        <option value="public"  <?= $current_vis === 'public'  ? 'selected' : '' ?>>Visible to all</option>
+        <option value="hidden"  <?= $current_vis === 'hidden'  ? 'selected' : '' ?>>My collection only</option>
+    </select>
+    <span id="visibility_warn" style="display:none;margin-left:10px;color:#c00;font-weight:bold;">
+        &#9888; A part listed for sale cannot be &ldquo;My collection only&rdquo; &mdash; please change the visibility.
+    </span><br><br>
 
     <input type="submit" value="Save changes" class="btn" style="padding:9px 24px;" />
     <a href="index.php?navigate=viewpart&id=<?= $id ?>" style="padding:9px 18px;margin-left:10px;">Cancel</a>
@@ -184,6 +198,12 @@ mysqli_close($CarpartsConnection);
 </div>
 
 <script>
+function togglePriceInput() {
+    var sel  = document.getElementById('price_type_sel');
+    var wrap = document.getElementById('price_input_wrap');
+    wrap.style.display = sel.value === 'fixed' ? 'inline' : 'none';
+}
+
 var _models    = <?= $models_json ?>;
 var _prevModel = <?= (int)($part['model_id'] ?? 0) ?>;
 var _existingCompat = <?= $compat_json ?>;
@@ -289,9 +309,30 @@ function refreshCompatData() {
     document.getElementById('compat_data').value = JSON.stringify(data);
 }
 
-document.getElementById('editpart-form').addEventListener('submit', refreshCompatData);
+document.getElementById('editpart-form').addEventListener('submit', function(e) {
+    refreshCompatData();
+    if (document.getElementById('for_sale_cb').checked &&
+        document.getElementById('visibility_sel').value === 'hidden') {
+        checkVisibilitySale();
+        e.preventDefault();
+    }
+});
+
+function checkVisibilitySale() {
+    var forSale = document.getElementById('for_sale_cb').checked;
+    var vis     = document.getElementById('visibility_sel');
+    var warn    = document.getElementById('visibility_warn');
+    var invalid = forSale && vis.value === 'hidden';
+    vis.style.outline     = invalid ? '3px solid #c00' : '';
+    vis.style.background  = invalid ? '#fff0f0'        : '';
+    warn.style.display    = invalid ? 'inline'         : 'none';
+}
+
+document.getElementById('for_sale_cb').addEventListener('change', checkVisibilitySale);
+document.getElementById('visibility_sel').addEventListener('change', checkVisibilitySale);
 
 // Pre-populate model dropdown and compat rows
 updateModels('make_id', 'model_id', null, null);
 _existingCompat.forEach(function(e) { addCompatRow(e.make_id, e.model_id); });
+checkVisibilitySale();
 </script>

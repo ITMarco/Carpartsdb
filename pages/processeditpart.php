@@ -46,16 +46,23 @@ $make_id     = intval($_POST['make_id'] ?? 0);
 $model_id    = intval($_POST['model_id'] ?? 0) ?: null;
 $year_from   = intval($_POST['year_from'] ?? 0);
 $year_to     = intval($_POST['year_to'] ?? 0) ?: null;
+$price_type  = in_array($_POST['price_type'] ?? '', ['fixed','request','bid']) ? $_POST['price_type'] : 'fixed';
 $price_raw   = trim($_POST['price'] ?? '');
-$price       = ($price_raw !== '') ? round(floatval($price_raw), 2) : null;
+$price       = ($price_type === 'fixed' && $price_raw !== '') ? round(floatval($price_raw), 2) : null;
 $condition   = max(0, min(5, intval($_POST['condition'] ?? 3)));
 $stock       = max(1, intval($_POST['stock'] ?? 1));
 $oem         = trim($_POST['oem_number'] ?? '') ?: null;
 $replacement = trim($_POST['replacement_number'] ?? '') ?: null;
 $description = trim($_POST['description'] ?? '') ?: null;
 $can_set_private = !empty($_SESSION['isadmin']) || !empty($_SESSION['is_member']);
-$visible_prv = ($can_set_private && isset($_POST['visible_private']) && $_POST['visible_private'] == '1') ? 1 : 0;
-$visible     = (isset($_POST['visible']) && $_POST['visible'] == '1') ? 1 : 0;
+$vis_val = $_POST['visibility'] ?? 'private';
+if ($vis_val === 'public') {
+    $visible = 1; $visible_prv = 0;
+} elseif ($vis_val === 'private' && $can_set_private) {
+    $visible = 0; $visible_prv = 1;
+} else {
+    $visible = 0; $visible_prv = 0;
+}
 $for_sale    = (isset($_POST['for_sale']) && $_POST['for_sale'] == '1') ? 1 : 0;
 
 if (empty($title) || $make_id <= 0) {
@@ -86,14 +93,14 @@ if ($year_to !== null && $year_to < $year_from) {
 $stmt = $CarpartsConnection->prepare(
     "UPDATE `PARTS` SET
         `make_id`=?, `model_id`=?, `title`=?, `description`=?,
-        `year_from`=?, `year_to`=?, `price`=?, `condition`=?, `stock`=?,
+        `year_from`=?, `year_to`=?, `price`=?, `price_type`=?, `condition`=?, `stock`=?,
         `oem_number`=?, `replacement_number`=?, `visible`=?, `visible_private`=?, `for_sale`=?
      WHERE `id`=?"
 );
 $stmt->bind_param(
-    'iissiiidissiiii',
+    'iissiidsiissiiii',
     $make_id, $model_id, $title, $description,
-    $year_from, $year_to, $price, $condition, $stock,
+    $year_from, $year_to, $price, $price_type, $condition, $stock,
     $oem, $replacement, $visible, $visible_prv, $for_sale, $id
 );
 
@@ -106,7 +113,8 @@ if ($stmt->execute()) {
     parts_compat_save($CarpartsConnection, $id, is_array($compat_arr) ? $compat_arr : []);
 
     mysqli_close($CarpartsConnection);
-    header("Location: index.php?navigate=viewpart&id={$id}");
+    echo "<div class='content-box'><p>Part saved. <a href='index.php?navigate=viewpart&amp;id={$id}'>View part &rarr;</a></p>"
+         . "<script>window.location.replace('index.php?navigate=viewpart&id={$id}');</script></div>";
     exit();
 } else {
     echo "<div class='content-box'><p style='color:red;'>Error updating part: "
