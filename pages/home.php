@@ -63,7 +63,7 @@ if ($cq) while ($cr = $cq->fetch_assoc()) {
 
 // Recent parts (last 6, excluding sold)
 $rq = $CarpartsConnection->query(
-    "SELECT p.`id`, p.`title`, p.`price`, p.`condition`, p.`year_from`, p.`year_to`, p.`created_at`,
+    "SELECT p.`id`, p.`title`, p.`price`, p.`price_type`, p.`condition`, p.`year_from`, p.`year_to`, p.`created_at`,
             m.`name` AS make_name, mo.`name` AS model_name,
             u.`realname` AS seller_name, u.`email` AS seller_email
      FROM `PARTS` p
@@ -172,16 +172,21 @@ if ($nq) while ($nr = $nq->fetch_assoc()) $news_items[] = $nr;
 
 </div>
 
+<?php if (!empty($_SESSION['authenticated'])): ?>
 <p style="margin-top:10px;">
-    <a href="index.php?navigate=browse" class="btn" style="padding:8px 18px;font-size:14px;">Browse all parts</a>
+    <a href="index.php?navigate=myparts" class="btn" style="padding:8px 18px;font-size:14px;">View my parts</a>
     <a href="index.php?navigate=addpart" class="btn" style="padding:8px 18px;font-size:14px;margin-left:10px;">Sell a part</a>
 </p>
+<?php endif; ?>
 </div>
 
 <?php if (!empty($recent_parts)): ?>
 <div class="content-box">
 <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
-    <h3 style="margin:0;">Recently listed</h3>
+    <div style="display:flex;align-items:center;gap:14px;">
+        <h3 style="margin:0;">Recently listed</h3>
+        <a href="index.php?navigate=browse" style="font-size:13px;">View all parts &rarr;</a>
+    </div>
     <div style="display:flex;gap:4px;">
         <button id="home-btn-list" onclick="homeSetView('list')"
                 style="padding:4px 10px;font-size:12px;border-radius:3px;cursor:pointer;border:1px solid var(--color-content-border);">
@@ -236,7 +241,7 @@ if ($nq) while ($nr = $nq->fetch_assoc()) $news_items[] = $nr;
     </td>
     <td style="padding:5px 10px;"><?= htmlspecialchars(parts_condition_label((int)$rp['condition'])) ?></td>
     <td style="padding:5px 10px;text-align:right;font-weight:bold;">
-        <?= $rp['price'] !== null ? '&euro;' . number_format((float)$rp['price'], 2, ',', '.') : '<span style="color:#888;font-size:11px;">On request</span>' ?>
+        <?php $hpt=$rp['price_type']??'fixed'; echo $hpt==='bid'?'<span style="color:var(--color-accent);font-size:11px;">Make a bid</span>':($rp['price']!==null?'&euro;'.number_format((float)$rp['price'],2,',','.'):'<span style="color:#888;font-size:11px;">On request</span>'); ?>
     </td>
 </tr>
 <?php endforeach; ?>
@@ -268,7 +273,7 @@ if ($nq) while ($nr = $nq->fetch_assoc()) $news_items[] = $nr;
             <?= htmlspecialchars($rp['make_name']) ?><?= $rp['model_name'] ? ' &mdash; ' . htmlspecialchars($rp['model_name']) : '' ?>
         </div>
         <div style="font-size:12px;font-weight:bold;color:var(--color-accent);">
-            <?= $rp['price'] !== null ? '&euro;' . number_format((float)$rp['price'], 2, ',', '.') : '<span style="font-size:11px;color:#888;font-weight:normal;">On request</span>' ?>
+            <?php $hpt=$rp['price_type']??'fixed'; echo $hpt==='bid'?'<span style="font-size:11px;color:var(--color-accent);">Make a bid</span>':($rp['price']!==null?'&euro;'.number_format((float)$rp['price'],2,',','.'):'<span style="font-size:11px;color:#888;font-weight:normal;">On request</span>'); ?>
         </div>
     </div>
 </a>
