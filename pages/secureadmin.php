@@ -5,7 +5,7 @@ require_once __DIR__ . '/../login_helper.php';
 // Redirect if already authenticated
 if (isset($_SESSION['authenticated']) && $_SESSION['authenticated'] === true) {
     $dest = (!empty($_SESSION['isadmin'])) ? 'adminpanel' : 'browse';
-    header("Location: index.php?navigate={$dest}");
+    echo "<script>window.location.replace('index.php?navigate=" . addslashes($dest) . "');</script>";
     exit();
 }
 
@@ -67,7 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 mysqli_close($CarpartsConnection);
                 $dest = ($myrow['isadmin'] == 1) ? 'adminpanel' : 'browse';
-                header("Location: index.php?navigate={$dest}");
+                echo "<script>window.location.replace('index.php?navigate=" . addslashes($dest) . "');</script>";
                 exit();
             } else {
                 record_failed_login();

@@ -1,24 +1,26 @@
 <?php
 if (!empty($_SESSION['authenticated'])) {
-    header('Location: index.php?navigate=browse');
+    echo "<script>window.location.replace('index.php?navigate=browse');</script>";
     exit();
 }
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Location: index.php?navigate=signup');
+    echo "<script>window.location.replace('index.php?navigate=signup');</script>";
     exit();
 }
 
 // CSRF
 if (!isset($_POST['csrf_token'], $_SESSION['csrf_token'])
     || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
-    header('Location: index.php?navigate=signup&error=' . rawurlencode('Security validation failed. Please try again.'));
+    $dest = 'index.php?navigate=signup&error=' . rawurlencode('Security validation failed. Please try again.');
+    echo "<script>window.location.replace('" . addslashes($dest) . "');</script>";
     exit();
 }
 
 // Honeypot — if filled, silently act like success (fool bots)
 if (!empty($_POST['website'])) {
-    header('Location: index.php?navigate=signup&success=' . rawurlencode('Account created! Please check your email to confirm.'));
+    $dest = 'index.php?navigate=signup&success=' . rawurlencode('Account created! Please check your email to confirm.');
+    echo "<script>window.location.replace('" . addslashes($dest) . "');</script>";
     exit();
 }
 
@@ -44,8 +46,9 @@ if ($password !== $password2) {
 }
 
 if ($errors) {
-    $msg = implode(' ', $errors);
-    header('Location: index.php?navigate=signup&error=' . rawurlencode($msg) . '&email=' . rawurlencode($email));
+    $msg  = implode(' ', $errors);
+    $dest = 'index.php?navigate=signup&error=' . rawurlencode($msg) . '&email=' . rawurlencode($email);
+    echo "<script>window.location.replace('" . addslashes($dest) . "');</script>";
     exit();
 }
 
@@ -61,13 +64,13 @@ $existing = users_get_by_email($CarpartsConnection, $email);
 if ($existing) {
     mysqli_close($CarpartsConnection);
     if ((int)($existing['is_confirmed'] ?? 1) === 0) {
-        // Already registered but not confirmed — offer to resend
         $msg = 'This email is already registered but not yet confirmed. '
              . '<a href="index.php?navigate=resendemail&email=' . rawurlencode($email) . '">Resend confirmation email</a>.';
     } else {
         $msg = 'This email address is already registered. <a href="index.php?navigate=secureadmin">Log in</a> or use a different address.';
     }
-    header('Location: index.php?navigate=signup&error=' . rawurlencode($msg) . '&email=' . rawurlencode($email));
+    $dest = 'index.php?navigate=signup&error=' . rawurlencode($msg) . '&email=' . rawurlencode($email);
+    echo "<script>window.location.replace('" . addslashes($dest) . "');</script>";
     exit();
 }
 
@@ -85,7 +88,8 @@ if (!$stmt->execute()) {
     $err = $stmt->error;
     $stmt->close();
     mysqli_close($CarpartsConnection);
-    header('Location: index.php?navigate=signup&error=' . rawurlencode('Registration failed. Please try again.') . '&email=' . rawurlencode($email));
+    $dest = 'index.php?navigate=signup&error=' . rawurlencode('Registration failed. Please try again.') . '&email=' . rawurlencode($email);
+    echo "<script>window.location.replace('" . addslashes($dest) . "');</script>";
     exit();
 }
 $stmt->close();
@@ -127,7 +131,8 @@ if (!$sent) {
                  . "Please click the link in the email to activate your account.";
 }
 
-header('Location: index.php?navigate=signup&success=' . rawurlencode($success_msg));
+$dest = 'index.php?navigate=signup&success=' . rawurlencode($success_msg);
+echo "<script>window.location.replace('" . addslashes($dest) . "');</script>";
 exit();
 
 // ── Helper ────────────────────────────────────────────────────────────────────

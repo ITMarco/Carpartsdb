@@ -18,9 +18,7 @@ session_destroy();
 
 echo "<p>You have been successfully logged out.</p>";
 echo "<p>Redirecting to home page...</p>";
-
-// Redirect to home page after 2 seconds
-header("refresh:2;url=index.php");
+echo "<script>setTimeout(function(){ window.location.replace('index.php'); }, 2000);</script>";
 ?>
 
 </div>

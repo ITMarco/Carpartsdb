@@ -91,6 +91,7 @@ mysqli_close($CarpartsConnection);
 <form method="get" action="index.php">
     <input type="hidden" name="navigate" value="exportparts" />
     <input type="hidden" name="download" value="1" />
+    <input type="hidden" name="ajax"     value="1" />
     <label>
         <input type="checkbox" name="include_sold" value="1" />
         Include sold listings

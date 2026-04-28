@@ -1,6 +1,6 @@
 <?php
 if (!empty($_SESSION['authenticated'])) {
-    header('Location: index.php?navigate=browse');
+    echo "<script>window.location.replace('index.php?navigate=browse');</script>";
     exit();
 }
 

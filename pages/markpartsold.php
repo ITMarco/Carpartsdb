@@ -1,7 +1,7 @@
 <?php
 if (empty($_SESSION['authenticated'])) {
-    header('Location: index.php?navigate=secureadmin');
-    exit();
+    echo "<div class='content-box'><p style='color:red;'>Please <a href='index.php?navigate=secureadmin'>log in</a>.</p></div>";
+    return;
 }
 
 // State-changing action — must be POST with valid CSRF token
@@ -48,5 +48,7 @@ $stmt->execute();
 $stmt->close();
 mysqli_close($CarpartsConnection);
 
-header("Location: index.php?navigate=viewpart&id={$id}");
+$dest = 'index.php?navigate=viewpart&id=' . $id;
+echo "<div class='content-box'><p>Done. <a href='" . htmlspecialchars($dest) . "'>Back to part &rarr;</a></p>"
+   . "<script>window.location.replace('" . addslashes($dest) . "');</script></div>";
 exit();

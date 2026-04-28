@@ -1,13 +1,13 @@
 <?php
 if (empty($_SESSION['authenticated'])) {
-    header('Location: index.php?navigate=secureadmin');
-    exit();
+    echo "<div class='content-box'><p style='color:red;'>Please <a href='index.php?navigate=secureadmin'>log in</a>.</p></div>";
+    return;
 }
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST'
     || !isset($_POST['csrf_token'], $_SESSION['csrf_token'])
     || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
-    header('Location: index.php?navigate=myparts');
+    echo "<script>window.location.replace('index.php?navigate=myparts');</script>";
     exit();
 }
 
@@ -17,7 +17,7 @@ $seller_id = (int)$_SESSION['user_id'];
 $is_admin  = !empty($_SESSION['isadmin']);
 
 if (!in_array($action, ['sold', 'relist', 'delete'], true) || empty($ids_raw)) {
-    header('Location: index.php?navigate=myparts');
+    echo "<script>window.location.replace('index.php?navigate=myparts');</script>";
     exit();
 }
 
@@ -25,7 +25,7 @@ if (!in_array($action, ['sold', 'relist', 'delete'], true) || empty($ids_raw)) {
 $ids = array_map('intval', (array)$ids_raw);
 $ids = array_filter($ids, fn($v) => $v > 0);
 if (empty($ids)) {
-    header('Location: index.php?navigate=myparts');
+    echo "<script>window.location.replace('index.php?navigate=myparts');</script>";
     exit();
 }
 
@@ -84,5 +84,6 @@ if ($action === 'delete') {
 }
 
 mysqli_close($CarpartsConnection);
-header('Location: index.php?navigate=myparts');
+echo "<div class='content-box'><p>Done. <a href='index.php?navigate=myparts'>Back to my parts &rarr;</a></p>"
+   . "<script>window.location.replace('index.php?navigate=myparts');</script></div>";
 exit();

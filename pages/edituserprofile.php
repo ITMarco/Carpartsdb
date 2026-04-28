@@ -43,7 +43,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $_SESSION['username'] = $realname ?: $_SESSION['user_email'];
 
     mysqli_close($CarpartsConnection);
-    header('Location: index.php?navigate=userprofile&id=' . $user_id . '&saved=1');
+    $dest = 'index.php?navigate=userprofile&id=' . $user_id . '&saved=1';
+    echo "<div class='content-box'><p>Profile saved. <a href='" . htmlspecialchars($dest) . "'>Back to profile &rarr;</a></p>"
+       . "<script>window.location.replace('" . addslashes($dest) . "');</script></div>";
     exit();
 }
 

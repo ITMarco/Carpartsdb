@@ -36,7 +36,8 @@ if ($userid <= 0) {
 if ($action === 'Confirm') {
     users_confirm($CarpartsConnection, $userid);
     mysqli_close($CarpartsConnection);
-    header('Location: index.php?navigate=edituser&msg=' . urlencode('User confirmed successfully.'));
+    $dest = 'index.php?navigate=edituser&msg=' . urlencode('User confirmed successfully.');
+    echo "<script>window.location.replace('" . addslashes($dest) . "');</script>";
     exit();
 
 } elseif ($action === 'Resend') {
@@ -73,7 +74,8 @@ if ($action === 'Confirm') {
     mail($u['email'], $subject, $body, $headers);
 
     mysqli_close($CarpartsConnection);
-    header('Location: index.php?navigate=edituser&msg=' . urlencode('Confirmation email resent to ' . $u['email'] . '.'));
+    $dest = 'index.php?navigate=edituser&msg=' . urlencode('Confirmation email resent to ' . $u['email'] . '.');
+    echo "<script>window.location.replace('" . addslashes($dest) . "');</script>";
     exit();
 
 } elseif ($action === 'Delete') {
@@ -82,7 +84,8 @@ if ($action === 'Confirm') {
     if ($stmt->execute()) {
         $stmt->close();
         mysqli_close($CarpartsConnection);
-        header('Location: index.php?navigate=edituser&msg=' . urlencode('User deleted.'));
+        $dest = 'index.php?navigate=edituser&msg=' . urlencode('User deleted.');
+        echo "<script>window.location.replace('" . addslashes($dest) . "');</script>";
         exit();
     } else {
         echo "<div style='color:red;'>Error deleting user: " . htmlspecialchars($stmt->error) . "</div>";

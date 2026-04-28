@@ -87,14 +87,20 @@ $reply_recipient = $parent['sender_id'] ? (int)$parent['sender_id'] : null;
 $sender_id       = (int)$_SESSION['user_id'];
 $sender_name     = $_SESSION['username'] ?? $_SESSION['user_email'] ?? '';
 
+$sender_email = '';
 $ins = $CarpartsConnection->prepare(
     "INSERT INTO `PART_MESSAGES`
         (`part_id`,`parent_id`,`sender_id`,`recipient_id`,`name`,`email`,`message`)
      VALUES (?,?,?,?,?,?,?)"
 );
+if (!$ins) {
+    mysqli_close($CarpartsConnection);
+    echo "<div class='content-box'><p style='color:red;'>Database error. <a href='index.php?navigate=viewpart&id={$part_id}'>Back to part</a></p></div>";
+    exit();
+}
 $ins->bind_param('iiissss',
     $part_id, $parent_id, $sender_id, $reply_recipient,
-    $sender_name, '', $message
+    $sender_name, $sender_email, $message
 );
 $ins->execute();
 $ins->close();

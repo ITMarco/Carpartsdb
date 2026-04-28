@@ -27,7 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST'
         settings_set($CarpartsConnection, 'msg_inbox_limit',  (string)$inbox_limit);
         settings_set($CarpartsConnection, 'msg_thread_limit', (string)$thread_limit);
         mysqli_close($CarpartsConnection);
-        header('Location: index.php?navigate=adminmessages&saved=1');
+        echo "<script>window.location.replace('index.php?navigate=adminmessages&saved=1');</script>";
         exit();
     }
 
@@ -42,7 +42,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST'
         }
         $back_part = intval($_POST['part_id'] ?? 0);
         mysqli_close($CarpartsConnection);
-        header('Location: index.php?navigate=adminmessages&deleted=1' . ($back_part ? '&part=' . $back_part : ''));
+        $dest = 'index.php?navigate=adminmessages&deleted=1' . ($back_part ? '&part=' . $back_part : '');
+        echo "<script>window.location.replace('" . addslashes($dest) . "');</script>";
         exit();
     }
 }

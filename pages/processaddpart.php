@@ -5,7 +5,7 @@ if (empty($_SESSION['authenticated'])) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Location: index.php?navigate=addpart');
+    echo "<script>window.location.replace('index.php?navigate=addpart');</script>";
     exit();
 }
 

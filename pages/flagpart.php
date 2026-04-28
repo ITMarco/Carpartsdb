@@ -1,8 +1,8 @@
 <?php
 // Logged-in users only (not the seller, not anon)
 if (empty($_SESSION['authenticated'])) {
-    header('Location: index.php?navigate=secureadmin');
-    exit();
+    echo "<div class='content-box'><p>Please <a href='index.php?navigate=secureadmin'>log in</a> to report a listing.</p></div>";
+    return;
 }
 
 if (!isset($_SESSION['csrf_token'])) {
@@ -11,8 +11,8 @@ if (!isset($_SESSION['csrf_token'])) {
 
 $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 if ($id <= 0) {
-    header('Location: index.php?navigate=browse');
-    exit();
+    echo "<div class='content-box'><p>Invalid listing. <a href='index.php?navigate=browse'>Browse parts</a></p></div>";
+    return;
 }
 
 if (!defined('CARPARTS_ACCESS')) define('CARPARTS_ACCESS', 1);

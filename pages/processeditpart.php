@@ -5,7 +5,7 @@ if (empty($_SESSION['authenticated'])) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Location: index.php?navigate=browse');
+    echo "<script>window.location.replace('index.php?navigate=browse');</script>";
     exit();
 }
 
