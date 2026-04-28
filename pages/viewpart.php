@@ -11,7 +11,7 @@ if (!isset($_SESSION['csrf_token'])) {
 $id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 if ($id <= 0) {
     mysqli_close($CarpartsConnection);
-    echo "<div class='content-box'><p>Invalid part ID.</p><p><a href='index.php?navigate=browse'>Back to browse</a></p></div>";
+    echo "<div class='content-box'><p>Invalid part ID.</p><p><a href='index.php?navigate=browse' class='btn' style='padding:5px 14px;'>&#8592; Back to browse</a></p></div>";
     return;
 }
 
@@ -32,7 +32,7 @@ if ($part) {
 
 if (!$part) {
     mysqli_close($CarpartsConnection);
-    echo "<div class='content-box'><p>Part not found.</p><p><a href='index.php?navigate=browse'>Back to browse</a></p></div>";
+    echo "<div class='content-box'><p>Part not found.</p><p><a href='index.php?navigate=browse' class='btn' style='padding:5px 14px;'>&#8592; Back to browse</a></p></div>";
     return;
 }
 
@@ -374,7 +374,7 @@ $show_amayama = in_array(strtolower($part['make_name']), $_amayama_makes, true);
 </div>
 
 <p style="margin-top:16px;display:flex;align-items:center;flex-wrap:wrap;gap:10px;">
-    <a href="index.php?navigate=browse">&larr; Back to browse</a>
+    <a href="index.php?navigate=browse" class="btn" style="padding:4px 12px;font-size:12px;">&larr; Back to browse</a>
     <button id="share-btn" onclick="sharePartLink()"
             style="padding:4px 12px;font-size:12px;border-radius:3px;cursor:pointer;
                    border:1px solid var(--color-content-border);background:var(--color-surface);">
