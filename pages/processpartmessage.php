@@ -46,14 +46,16 @@ if ($action === 'delete') {
         }
     }
     mysqli_close($CarpartsConnection);
-    header("Location: index.php?navigate=viewpart&id={$part_id}");
+    $dest = 'index.php?navigate=viewpart&id=' . $part_id;
+    echo "<div class='content-box'><p>Message deleted. <a href='" . htmlspecialchars($dest) . "'>Back to part &rarr;</a></p>"
+       . "<script>window.location.replace('" . addslashes($dest) . "');</script></div>";
     exit();
 }
 
 // ── Send a message ─────────────────────────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     mysqli_close($CarpartsConnection);
-    header('Location: index.php?navigate=browse');
+    echo "<script>window.location.replace('index.php?navigate=browse');</script>";
     exit();
 }
 
@@ -69,14 +71,15 @@ $message = trim($_POST['message'] ?? '');
 
 if ($part_id <= 0 || $message === '') {
     mysqli_close($CarpartsConnection);
-    header("Location: index.php?navigate=viewpart&id={$part_id}&msg_error=" . urlencode('Message cannot be empty.'));
+    $dest = 'index.php?navigate=viewpart&id=' . $part_id . '&msg_error=' . urlencode('Message cannot be empty.');
+    echo "<script>window.location.replace('" . addslashes($dest) . "');</script>";
     exit();
 }
 
 $part = parts_get($CarpartsConnection, $part_id, false);
 if (!$part) {
     mysqli_close($CarpartsConnection);
-    header('Location: index.php?navigate=browse');
+    echo "<script>window.location.replace('index.php?navigate=browse');</script>";
     exit();
 }
 
@@ -91,13 +94,13 @@ if (!empty($_SESSION['authenticated']) && !empty($_SESSION['user_id'])) {
     $email     = trim($_POST['email'] ?? '');
     if ($name === '' || $email === '') {
         mysqli_close($CarpartsConnection);
-        header("Location: index.php?navigate=viewpart&id={$part_id}&msg_error=" . urlencode('Please enter your name and email.'));
+        $dest = 'index.php?navigate=viewpart&id=' . $part_id . '&msg_error=' . urlencode('Please enter your name and email.');
+        echo "<script>window.location.replace('" . addslashes($dest) . "');</script>";
         exit();
     }
 }
 
 // Rate-limit: max 5 messages per IP per 24 h
-$ip = $_SERVER['REMOTE_ADDR'] ?? '';
 $rl = $CarpartsConnection->prepare(
     "SELECT COUNT(*) FROM `PART_MESSAGES` WHERE `sender_id` IS NULL AND `email` = ?
      AND `created_at` > NOW() - INTERVAL 24 HOUR"
@@ -112,7 +115,8 @@ if ($rl) {
 }
 if ($sender_id === null && $rl_count >= 5) {
     mysqli_close($CarpartsConnection);
-    header("Location: index.php?navigate=viewpart&id={$part_id}&msg_error=" . urlencode('Too many messages from this address. Please try again tomorrow.'));
+    $dest = 'index.php?navigate=viewpart&id=' . $part_id . '&msg_error=' . urlencode('Too many messages from this address. Please try again tomorrow.');
+    echo "<script>window.location.replace('" . addslashes($dest) . "');</script>";
     exit();
 }
 
@@ -148,7 +152,8 @@ if ($recipient_id) {
             }
             if ($cnt_val >= $inbox_limit) {
                 mysqli_close($CarpartsConnection);
-                header("Location: index.php?navigate=viewpart&id={$part_id}&msg_error=" . urlencode('This seller\'s inbox is currently full. Please try again later or contact them another way.'));
+                $dest = 'index.php?navigate=viewpart&id=' . $part_id . '&msg_error=' . urlencode('This seller\'s inbox is currently full. Please try again later or contact them another way.');
+                echo "<script>window.location.replace('" . addslashes($dest) . "');</script>";
                 exit();
             }
         }
@@ -178,5 +183,7 @@ if ($seller_email !== '') {
 }
 
 mysqli_close($CarpartsConnection);
-header("Location: index.php?navigate=viewpart&id={$part_id}&msg_sent=1");
+$dest = 'index.php?navigate=viewpart&id=' . $part_id . '&msg_sent=1';
+echo "<div class='content-box'><p>Message sent! <a href='" . htmlspecialchars($dest) . "'>Back to part &rarr;</a></p>"
+   . "<script>window.location.replace('" . addslashes($dest) . "');</script></div>";
 exit();

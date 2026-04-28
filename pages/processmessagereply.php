@@ -24,7 +24,8 @@ $message   = trim($_POST['message'] ?? '');
 
 if ($parent_id <= 0 || $part_id <= 0 || $message === '') {
     mysqli_close($CarpartsConnection);
-    header("Location: index.php?navigate=viewpart&id={$part_id}#qa-section");
+    $dest = 'index.php?navigate=viewpart&id=' . $part_id . '#qa-section';
+    echo "<script>window.location.replace('" . addslashes($dest) . "');</script>";
     exit();
 }
 
@@ -46,7 +47,8 @@ $chk->close();
 
 if (!$parent) {
     mysqli_close($CarpartsConnection);
-    header("Location: index.php?navigate=viewpart&id={$part_id}#qa-section");
+    $dest = 'index.php?navigate=viewpart&id=' . $part_id . '#qa-section';
+    echo "<script>window.location.replace('" . addslashes($dest) . "');</script>";
     exit();
 }
 
@@ -74,7 +76,8 @@ if ($thread_limit > 0) {
     }
     if ($dc_val >= $thread_limit) {
         mysqli_close($CarpartsConnection);
-        header("Location: index.php?navigate=viewpart&id={$part_id}&msg_error=" . urlencode('This conversation has reached the maximum length (' . $thread_limit . ' messages).'));
+        $dest = 'index.php?navigate=viewpart&id=' . $part_id . '&msg_error=' . urlencode('This conversation has reached the maximum length (' . $thread_limit . ' messages).');
+        echo "<script>window.location.replace('" . addslashes($dest) . "');</script>";
         exit();
     }
 }
@@ -110,5 +113,7 @@ if ($buyer_email !== '' && filter_var($buyer_email, FILTER_VALIDATE_EMAIL)) {
 }
 
 mysqli_close($CarpartsConnection);
-header("Location: index.php?navigate=viewpart&id={$part_id}&msg_sent=1#qa-section");
+$dest = 'index.php?navigate=viewpart&id=' . $part_id . '&msg_sent=1#qa-section';
+echo "<div class='content-box'><p>Reply sent! <a href='" . htmlspecialchars($dest) . "'>Back to part &rarr;</a></p>"
+   . "<script>window.location.replace('" . addslashes($dest) . "');</script></div>";
 exit();
