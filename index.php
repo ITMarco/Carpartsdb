@@ -13,6 +13,50 @@ $og_description = "Browse and sell used car parts. Search by make, model, year o
 $og_image       = "https://www.supraclub.nl/carparts/images/header1.jpg";
 $og_url         = "https://www.supraclub.nl/carparts/index.php";
 
+// Override OG tags for part detail pages so social previews show the part image & title
+if (isset($_GET['navigate']) && $_GET['navigate'] === 'viewpart' && !empty($_GET['id'])) {
+    $_og_id = intval($_GET['id']);
+    if ($_og_id > 0) {
+        if (!defined('CARPARTS_ACCESS')) define('CARPARTS_ACCESS', 1);
+        include_once 'config.php';
+        include_once 'parts_helper.php';
+        $_ogdb = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
+        if (!$_ogdb->connect_error) {
+            $_ogst = $_ogdb->prepare(
+                "SELECT p.`title`, p.`description`, m.`name` AS make_name, mo.`name` AS model_name
+                 FROM `PARTS` p
+                 JOIN `CAR_MAKES` m ON m.`id` = p.`make_id`
+                 LEFT JOIN `CAR_MODELS` mo ON mo.`id` = p.`model_id`
+                 WHERE p.`id` = ? AND p.`visible` = 1 LIMIT 1"
+            );
+            if ($_ogst) {
+                $_ogst->bind_param('i', $_og_id);
+                $_ogst->execute();
+                $_ogrow = $_ogst->get_result()->fetch_assoc();
+                $_ogst->close();
+                if ($_ogrow) {
+                    $og_title = $_ogrow['title']
+                        . ' — ' . $_ogrow['make_name']
+                        . ($_ogrow['model_name'] ? ' ' . $_ogrow['model_name'] : '')
+                        . ' — Car Parts DB';
+                    $og_description = !empty($_ogrow['description'])
+                        ? substr(strip_tags($_ogrow['description']), 0, 200)
+                        : 'Used car part: ' . $_ogrow['make_name']
+                          . ($_ogrow['model_name'] ? ' ' . $_ogrow['model_name'] : '');
+                    $og_url = 'https://www.supraclub.nl/carparts/index.php?navigate=viewpart&id=' . $_og_id;
+                    $_ogphoto = parts_first_photo($_og_id);
+                    if ($_ogphoto) {
+                        $og_image = 'https://www.supraclub.nl/carparts/' . $_ogphoto;
+                    }
+                }
+            }
+            $_ogdb->close();
+        }
+        unset($_ogdb, $_ogst, $_ogrow, $_ogphoto);
+    }
+    unset($_og_id);
+}
+
 define("MAX_IDLE_TIME", 600); // seconds
 
 function getOnlineUsers() {
