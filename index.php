@@ -30,7 +30,7 @@ function getOnlineUsers() {
 
 // SECURITY: Whitelist approach — prevents Local File Inclusion (LFI) attacks.
 // Only pages listed here are accessible via ?navigate=.
-// Helper/shared files (rdwu_functions.php, connection.php, etc.) must NOT be added.
+// Helper/shared files (connection.php, etc.) must NOT be added.
 $allowed_pages = [
     // Public
     'home', 'browse', 'viewpart', 'address', 'privacyverklaring',
@@ -39,7 +39,7 @@ $allowed_pages = [
     // Authenticated users (sellers)
     'addpart', 'processaddpart', 'editpart', 'processeditpart',
     'deletepart', 'uploadpartimage', 'deletepartimage', 'myparts',
-    'markpartsold', 'processpartmessage', 'mymessages',
+    'markpartsold', 'processpartmessage', 'processmessagereply', 'mymessages',
     // Auth
     'secureadmin', 'logout',
     // Admin
@@ -53,9 +53,11 @@ $allowed_pages = [
     // Bulk part actions
     'processbulkparts',
     // Reporting
-    'flagpart', 'flagadmin',
+    'flagpart', 'flagadmin', 'adminmessages',
     // Admin export
     'exportparts',
+    // Info
+    'about',
 ];
 
 // AJAX requests bypass the page layout so they can return pure JSON

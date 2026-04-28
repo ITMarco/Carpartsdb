@@ -51,6 +51,7 @@ if (isset($_SESSION['authenticated']) && $_SESSION['authenticated'] === true) {
     echo '<a href="index.php?navigate=secureadmin">Login</a>';
     echo ' | <a href="index.php?navigate=signup">Sign up</a>';
 }
+echo ' | <a href="index.php?navigate=about">About / Help</a>';
 echo ' | <a href="index.php?navigate=privacyverklaring">Privacyverklaring</a>';
 ?>
 </div>
@@ -62,23 +63,28 @@ echo ' | <a href="index.php?navigate=privacyverklaring">Privacyverklaring</a>';
 if (!empty($_SESSION['authenticated']) && !empty($_SESSION['user_id'])) {
     if (!defined('CARPARTS_ACCESS')) define('CARPARTS_ACCESS', 1);
     include_once 'config.php';
-    if (!isset($CarpartsConnection)) {
+    $_bb_own = false;
+    if (!isset($CarpartsConnection) || !($CarpartsConnection instanceof mysqli)
+        || !$CarpartsConnection->thread_id) {
         $CarpartsConnection = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
+        $_bb_own = true;
     }
     if (!$CarpartsConnection->connect_error) {
         $seller_uid = (int)$_SESSION['user_id'];
-        $unread_stmt = $CarpartsConnection->prepare(
-            "SELECT COUNT(*) FROM `PART_MESSAGES` pm
-             JOIN `PARTS` p ON p.`id` = pm.`part_id`
-             WHERE p.`seller_id` = ? AND pm.`read_at` IS NULL AND pm.`sender_id` != ?"
-        );
         $unread_count = 0;
-        if ($unread_stmt) {
-            $unread_stmt->bind_param('ii', $seller_uid, $seller_uid);
-            $unread_stmt->execute();
-            $unread_stmt->bind_result($unread_count);
-            $unread_stmt->fetch();
-            $unread_stmt->close();
+        try {
+            $unread_stmt = $CarpartsConnection->prepare(
+                "SELECT COUNT(*) FROM `PART_MESSAGES` WHERE `recipient_id` = ? AND `is_read` = 0"
+            );
+            if ($unread_stmt) {
+                $unread_stmt->bind_param('i', $seller_uid);
+                $unread_stmt->execute();
+                $unread_stmt->bind_result($unread_count);
+                $unread_stmt->fetch();
+                $unread_stmt->close();
+            }
+        } catch (\Throwable $_bb_e) {
+            // columns not yet migrated — notification stays hidden
         }
         if ($unread_count > 0):
 ?>
@@ -94,6 +100,8 @@ if (!empty($_SESSION['authenticated']) && !empty($_SESSION['user_id'])) {
 <?php
         endif;
     }
+    if ($_bb_own && isset($CarpartsConnection)) { $CarpartsConnection->close(); unset($CarpartsConnection); }
+    unset($_bb_own, $_bb_e, $seller_uid, $unread_count, $unread_stmt);
 }
 
 // ── Theme picker widget ───────────────────────────────────────────────────────

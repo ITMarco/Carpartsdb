@@ -116,10 +116,49 @@ if ($sender_id === null && $rl_count >= 5) {
     exit();
 }
 
+$recipient_id = isset($part['seller_id']) ? (int)$part['seller_id'] : null;
+
+// Check if seller's inbox is full
+if ($recipient_id) {
+    include_once 'settings_helper.php';
+    $inbox_limit = (int)settings_get($CarpartsConnection, 'msg_inbox_limit', 50);
+    if ($inbox_limit > 0) {
+        $ul = $CarpartsConnection->prepare(
+            "SELECT COALESCE(`inbox_unlimited`,0) FROM `USERS` WHERE `id`=? LIMIT 1"
+        );
+        $ul_val = 0;
+        if ($ul) {
+            $ul->bind_param('i', $recipient_id);
+            $ul->execute();
+            $ul->bind_result($ul_val);
+            $ul->fetch();
+            $ul->close();
+        }
+        if (!$ul_val) {
+            $cnt = $CarpartsConnection->prepare(
+                "SELECT COUNT(*) FROM `PART_MESSAGES` WHERE `recipient_id`=? AND `parent_id` IS NULL"
+            );
+            $cnt_val = 0;
+            if ($cnt) {
+                $cnt->bind_param('i', $recipient_id);
+                $cnt->execute();
+                $cnt->bind_result($cnt_val);
+                $cnt->fetch();
+                $cnt->close();
+            }
+            if ($cnt_val >= $inbox_limit) {
+                mysqli_close($CarpartsConnection);
+                header("Location: index.php?navigate=viewpart&id={$part_id}&msg_error=" . urlencode('This seller\'s inbox is currently full. Please try again later or contact them another way.'));
+                exit();
+            }
+        }
+    }
+}
+
 $stmt = $CarpartsConnection->prepare(
-    "INSERT INTO `PART_MESSAGES` (`part_id`,`sender_id`,`name`,`email`,`message`) VALUES (?,?,?,?,?)"
+    "INSERT INTO `PART_MESSAGES` (`part_id`,`sender_id`,`recipient_id`,`name`,`email`,`message`) VALUES (?,?,?,?,?,?)"
 );
-$stmt->bind_param('iisss', $part_id, $sender_id, $name, $email, $message);
+$stmt->bind_param('iiisss', $part_id, $sender_id, $recipient_id, $name, $email, $message);
 $stmt->execute();
 $stmt->close();
 

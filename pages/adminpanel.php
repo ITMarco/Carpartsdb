@@ -57,6 +57,7 @@ if (!isset($_SESSION['isadmin']) || $_SESSION['isadmin'] !== 1) {
                     <?php endif; ?>
                 </li>
                 <li><a href="index.php?navigate=commentadmin">Comment moderation</a></li>
+                <li><a href="index.php?navigate=adminmessages">Message moderation &amp; limits</a></li>
             </ul>
 
             <h2>Appearance:</h2>

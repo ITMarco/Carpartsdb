@@ -118,6 +118,35 @@ function parts_ensure_table(mysqli $db): void {
             COMMENT 'set when seller views the message' AFTER `created_at`");
     }
 
+    // Threading: parent_id links replies to their top-level message
+    $r = $db->query("SHOW COLUMNS FROM `PART_MESSAGES` LIKE 'parent_id'");
+    if ($r && $r->num_rows === 0) {
+        $db->query("ALTER TABLE `PART_MESSAGES`
+            ADD COLUMN `parent_id` INT NULL DEFAULT NULL AFTER `id`,
+            ADD INDEX `idx_parent` (`parent_id`)");
+    }
+
+    // recipient_id: which user this message is directed to (for unread tracking)
+    $r = $db->query("SHOW COLUMNS FROM `PART_MESSAGES` LIKE 'recipient_id'");
+    if ($r && $r->num_rows === 0) {
+        $db->query("ALTER TABLE `PART_MESSAGES`
+            ADD COLUMN `recipient_id` INT NULL DEFAULT NULL AFTER `sender_id`");
+        // Migrate existing top-level messages: recipient = part's seller
+        $db->query("UPDATE `PART_MESSAGES` pm
+                    JOIN `PARTS` p ON p.`id` = pm.`part_id`
+                    SET pm.`recipient_id` = p.`seller_id`
+                    WHERE pm.`parent_id` IS NULL AND pm.`recipient_id` IS NULL");
+    }
+
+    // is_read: 1 once the recipient has seen it
+    $r = $db->query("SHOW COLUMNS FROM `PART_MESSAGES` LIKE 'is_read'");
+    if ($r && $r->num_rows === 0) {
+        $db->query("ALTER TABLE `PART_MESSAGES`
+            ADD COLUMN `is_read` TINYINT NOT NULL DEFAULT 0 AFTER `recipient_id`");
+        // Migrate: messages with read_at set are already read
+        $db->query("UPDATE `PART_MESSAGES` SET `is_read` = 1 WHERE `read_at` IS NOT NULL");
+    }
+
     // View counter
     $r = $db->query("SHOW COLUMNS FROM `PARTS` LIKE 'view_count'");
     if ($r && $r->num_rows === 0) {

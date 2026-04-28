@@ -90,11 +90,12 @@ if ($action === 'Confirm') {
     $stmt->close();
 
 } elseif ($action === 'Save') {
-    $email     = strtolower(trim($_POST['email'] ?? ''));
-    $realname  = trim($_POST['realname'] ?? '');
-    $password  = $_POST['password'] ?? '';
-    $isadmin   = isset($_POST['isadmin'])   && $_POST['isadmin']   == '1' ? 1 : 0;
-    $is_member = isset($_POST['is_member']) && $_POST['is_member'] == '1' ? 1 : 0;
+    $email            = strtolower(trim($_POST['email'] ?? ''));
+    $realname         = trim($_POST['realname'] ?? '');
+    $password         = $_POST['password'] ?? '';
+    $isadmin          = isset($_POST['isadmin'])          && $_POST['isadmin']          == '1' ? 1 : 0;
+    $is_member        = isset($_POST['is_member'])        && $_POST['is_member']        == '1' ? 1 : 0;
+    $inbox_unlimited  = isset($_POST['inbox_unlimited'])  && $_POST['inbox_unlimited']  == '1' ? 1 : 0;
 
     if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
         echo "<div style='color:red;'>Valid email address is required.</div>";
@@ -125,21 +126,21 @@ if ($action === 'Confirm') {
         }
         $hashed = password_hash($password, PASSWORD_BCRYPT);
         $stmt   = $CarpartsConnection->prepare(
-            "UPDATE `USERS` SET `email`=?,`realname`=?,`password`=?,`isadmin`=?,`is_member`=? WHERE `id`=?"
+            "UPDATE `USERS` SET `email`=?,`realname`=?,`password`=?,`isadmin`=?,`is_member`=?,`inbox_unlimited`=? WHERE `id`=?"
         );
-        $stmt->bind_param('sssiii', $email, $realname, $hashed, $isadmin, $is_member, $userid);
+        $stmt->bind_param('sssiiii', $email, $realname, $hashed, $isadmin, $is_member, $inbox_unlimited, $userid);
     } else {
         $stmt = $CarpartsConnection->prepare(
-            "UPDATE `USERS` SET `email`=?,`realname`=?,`isadmin`=?,`is_member`=? WHERE `id`=?"
+            "UPDATE `USERS` SET `email`=?,`realname`=?,`isadmin`=?,`is_member`=?,`inbox_unlimited`=? WHERE `id`=?"
         );
-        $stmt->bind_param('ssiii', $email, $realname, $isadmin, $is_member, $userid);
+        $stmt->bind_param('ssiiii', $email, $realname, $isadmin, $is_member, $inbox_unlimited, $userid);
     }
 
     if ($stmt->execute()) {
         echo "<div style='background:#d4edda;border:1px solid #28a745;padding:12px;border-radius:4px;'>";
         echo "<strong>User updated successfully.</strong><br>";
         echo "Email: " . htmlspecialchars($email) . "<br>";
-        echo "Admin: " . ($isadmin ? 'Yes' : 'No') . " | Member: " . ($is_member ? 'Yes' : 'No');
+        echo "Admin: " . ($isadmin ? 'Yes' : 'No') . " | Member: " . ($is_member ? 'Yes' : 'No') . " | Unlimited inbox: " . ($inbox_unlimited ? 'Yes' : 'No');
         echo "</div>";
     } else {
         echo "<div style='color:red;'>Error updating user: " . htmlspecialchars($stmt->error) . "</div>";

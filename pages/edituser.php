@@ -21,6 +21,7 @@ if ($selected_id > 0) {
     // Fetch full row including confirmation status
     $ustmt = $CarpartsConnection->prepare(
         "SELECT `id`,`email`,`realname`,`isadmin`,`is_member`,
+                COALESCE(`inbox_unlimited`,0) AS `inbox_unlimited`,
                 COALESCE(`is_confirmed`,1) AS `is_confirmed`, `created_at`
          FROM `USERS` WHERE `id` = ? LIMIT 1"
     );
@@ -100,6 +101,11 @@ function confirmDelete() {
     <label>
         <input type="checkbox" name="is_member" value="1" <?= ($user['is_member'] == 1) ? 'checked' : '' ?> />
         <strong>Incrowd member</strong>
+    </label><br><br>
+
+    <label>
+        <input type="checkbox" name="inbox_unlimited" value="1" <?= ($user['inbox_unlimited'] == 1) ? 'checked' : '' ?> />
+        <strong>Unlimited inbox</strong> <small style="color:#666;font-weight:normal;">— inbox never fills up regardless of global limits</small>
     </label><br><br>
 
     <input type="submit" name="action" value="Save" class="btn" style="padding:8px 20px;" />

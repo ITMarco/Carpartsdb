@@ -43,7 +43,7 @@
 <p>Reacties kunnen een link naar een YouTube- of Vimeo-video bevatten. Deze video's worden <strong>niet automatisch geladen</strong>: pas nadat u op de videoafbeelding klikt, wordt er verbinding gemaakt met YouTube (<a href="https://www.youtube-nocookie.com" target="_blank" rel="noopener">youtube-nocookie.com</a>) of Vimeo. Op dat moment kunnen die diensten gegevens verwerken conform hun eigen privacybeleid. Zolang u niet klikt, worden er geen gegevens uitgewisseld met deze partijen.</p>
 
 <h4 style="margin-top:18px;">7. Delen van gegevens</h4>
-<p>Persoonsgegevens worden niet gedeeld met derden, tenzij dit wettelijk verplicht is. De enige externe databron die wordt gebruikt is de openbare RDW-kentekenregistratie; daarin worden geen persoonsgegevens van bezoekers gedeeld.</p>
+<p>Persoonsgegevens worden niet gedeeld met derden, tenzij dit wettelijk verplicht is.</p>
 
 <h4 style="margin-top:18px;">8. Beveiliging</h4>
 <p>Er worden passende technische maatregelen genomen om gegevens te beschermen, waaronder het gebruik van beveiligde formulieren (CSRF-beveiliging), invoervalidatie en beperkte toegang tot beheerdersfuncties.</p>

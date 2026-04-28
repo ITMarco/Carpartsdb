@@ -57,6 +57,14 @@ function users_ensure_table(mysqli $db): void {
                 COMMENT '1 = non-incrowd logged-in users can see phone/address' AFTER `bio`");
     }
 
+    // Unlimited inbox override — admin can exempt a user from inbox capacity limits
+    $r = $db->query("SHOW COLUMNS FROM `USERS` LIKE 'inbox_unlimited'");
+    if ($r && $r->num_rows === 0) {
+        $db->query("ALTER TABLE `USERS`
+            ADD COLUMN `inbox_unlimited` TINYINT(1) NOT NULL DEFAULT 0
+                COMMENT '1 = inbox never gets full regardless of msg_inbox_limit' AFTER `is_member`");
+    }
+
     // Per-user theme preference
     $r = $db->query("SHOW COLUMNS FROM `USERS` LIKE 'theme_id'");
     if ($r && $r->num_rows === 0) {

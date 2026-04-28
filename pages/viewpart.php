@@ -36,33 +36,84 @@ if (!$part) {
     return;
 }
 
-// Load messages
-$messages = [];
+// Load messages — all rows for this part, ordered so replies follow their parent
+$_all_msgs = [];
 $mq = $CarpartsConnection->prepare(
-    "SELECT pm.`id`, pm.`name`, pm.`email`, pm.`message`, pm.`created_at`,
+    "SELECT pm.`id`, pm.`parent_id`, pm.`sender_id`, pm.`recipient_id`, pm.`is_read`,
+            pm.`name`, pm.`email`, pm.`message`, pm.`created_at`,
             u.`realname` AS sender_name
      FROM `PART_MESSAGES` pm
      LEFT JOIN `USERS` u ON u.`id` = pm.`sender_id`
      WHERE pm.`part_id` = ?
-     ORDER BY pm.`created_at` ASC"
+     ORDER BY COALESCE(pm.`parent_id`, pm.`id`) ASC, pm.`created_at` ASC"
 );
 if ($mq) {
     $mq->bind_param('i', $id);
     $mq->execute();
-    $messages = $mq->get_result()->fetch_all(MYSQLI_ASSOC);
+    $_res = $mq->get_result();
+    $_all_msgs = $_res ? $_res->fetch_all(MYSQLI_ASSOC) : [];
     $mq->close();
+}
+
+// Organise into threads: top-level keyed by id, replies nested
+$threads = [];
+foreach ($_all_msgs as $m) {
+    if ($m['parent_id'] === null) {
+        $threads[$m['id']] = array_merge($m, ['replies' => []]);
+    }
+}
+foreach ($_all_msgs as $m) {
+    if ($m['parent_id'] !== null && isset($threads[$m['parent_id']])) {
+        $threads[$m['parent_id']]['replies'][] = $m;
+    }
+}
+
+// Mark messages directed at the current user as read
+if (!empty($_SESSION['user_id'])) {
+    $cur_uid = (int)$_SESSION['user_id'];
+    $mrq = $CarpartsConnection->prepare(
+        "UPDATE `PART_MESSAGES` SET `is_read` = 1, `read_at` = NOW()
+         WHERE `part_id` = ? AND `recipient_id` = ? AND `is_read` = 0"
+    );
+    if ($mrq) { $mrq->bind_param('ii', $id, $cur_uid); $mrq->execute(); $mrq->close(); }
 }
 
 // Increment view counter — skip for the seller and admins
 if (!$is_seller && empty($_SESSION['isadmin'])) {
     $vc = $CarpartsConnection->prepare("UPDATE `PARTS` SET `view_count` = `view_count` + 1 WHERE `id` = ?");
-    $vc->bind_param('i', $id);
-    $vc->execute();
-    $vc->close();
+    if ($vc) { $vc->bind_param('i', $id); $vc->execute(); $vc->close(); }
 }
 
 $photos = parts_photos($id);
 $compat = parts_compat_get($CarpartsConnection, $id);
+
+// Check if seller's inbox is full (for showing/hiding the contact form)
+$seller_inbox_full = false;
+if (!$is_seller && empty($_SESSION['isadmin']) && isset($part['seller_id'])) {
+    include_once 'settings_helper.php';
+    $inbox_limit = (int)settings_get($CarpartsConnection, 'msg_inbox_limit', 50);
+    if ($inbox_limit > 0) {
+        $ul = $CarpartsConnection->prepare(
+            "SELECT COALESCE(`inbox_unlimited`,0) FROM `USERS` WHERE `id`=? LIMIT 1"
+        );
+        $ul_val = 0;
+        if ($ul) {
+            $ul->bind_param('i', $part['seller_id']);
+            $ul->execute(); $ul->bind_result($ul_val); $ul->fetch(); $ul->close();
+        }
+        if (!$ul_val) {
+            $cnt = $CarpartsConnection->prepare(
+                "SELECT COUNT(*) FROM `PART_MESSAGES` WHERE `recipient_id`=? AND `parent_id` IS NULL"
+            );
+            $cnt_val = 0;
+            if ($cnt) {
+                $cnt->bind_param('i', $part['seller_id']);
+                $cnt->execute(); $cnt->bind_result($cnt_val); $cnt->fetch(); $cnt->close();
+            }
+            $seller_inbox_full = ($cnt_val >= $inbox_limit);
+        }
+    }
+}
 
 // Related parts — same make, different part, visible, not sold, max 4
 $related = [];
@@ -77,7 +128,8 @@ $rq = $CarpartsConnection->prepare(
 if ($rq) {
     $rq->bind_param('ii', $part['make_id'], $id);
     $rq->execute();
-    $related = $rq->get_result()->fetch_all(MYSQLI_ASSOC);
+    $_rres = $rq->get_result();
+    $related = $_rres ? $_rres->fetch_all(MYSQLI_ASSOC) : [];
     $rq->close();
 }
 
@@ -336,35 +388,6 @@ $show_amayama = in_array(strtolower($part['make_name']), $_amayama_makes, true);
 <div class="content-box" id="qa-section">
 <h3>Questions &amp; messages</h3>
 
-<?php if (!empty($messages)): ?>
-<?php foreach ($messages as $msg): ?>
-<div style="border:1px solid var(--color-content-border);border-radius:4px;padding:10px 14px;margin-bottom:10px;background:var(--color-surface);">
-    <div style="font-size:12px;color:#888;margin-bottom:4px;">
-        <strong><?= htmlspecialchars($msg['sender_name'] ?: $msg['name'] ?: 'Anonymous') ?></strong>
-        &mdash; <?= htmlspecialchars(substr($msg['created_at'], 0, 16)) ?>
-    </div>
-    <div style="font-size:13px;line-height:1.5;"><?= nl2br(htmlspecialchars($msg['message'])) ?></div>
-    <?php if ($can_edit): ?>
-    <div style="margin-top:6px;">
-        <form method="post" action="index.php?navigate=processpartmessage" style="display:inline;"
-              onsubmit="return confirm('Delete this message?');">
-            <input type="hidden" name="csrf_token" value="<?= $csrf ?>" />
-            <input type="hidden" name="action"     value="delete" />
-            <input type="hidden" name="id"         value="<?= (int)$msg['id'] ?>" />
-            <input type="hidden" name="part_id"    value="<?= $id ?>" />
-            <input type="submit" value="Delete"
-                   style="font-size:11px;color:#c04040;background:none;border:none;cursor:pointer;padding:0;" />
-        </form>
-    </div>
-    <?php endif; ?>
-</div>
-<?php endforeach; ?>
-<?php else: ?>
-<p style="color:#888;font-size:13px;">No messages yet.</p>
-<?php endif; ?>
-
-<?php if (!$is_seller): ?>
-<h4 style="margin-top:16px;">Send a message to the seller</h4>
 <?php
 $msg_sent  = !empty($_GET['msg_sent']);
 $msg_error = $_GET['msg_error'] ?? '';
@@ -376,6 +399,99 @@ if ($msg_sent): ?>
 <div style="color:red;margin-bottom:10px;"><?= htmlspecialchars($msg_error) ?></div>
 <?php endif; ?>
 
+<?php if (!empty($threads)): ?>
+<?php foreach ($threads as $thread):
+    $display_name = htmlspecialchars($thread['sender_name'] ?: $thread['name'] ?: 'Anonymous');
+?>
+<div style="border:1px solid var(--color-content-border);border-radius:5px;margin-bottom:12px;overflow:hidden;">
+    <!-- Top-level message -->
+    <div style="padding:10px 14px;background:var(--color-surface);">
+        <div style="font-size:12px;color:#888;margin-bottom:5px;">
+            <strong><?= $display_name ?></strong>
+            &mdash; <?= htmlspecialchars(substr($thread['created_at'], 0, 16)) ?>
+        </div>
+        <div style="font-size:13px;line-height:1.6;"><?= nl2br(htmlspecialchars($thread['message'])) ?></div>
+        <?php if ($can_edit): ?>
+        <div style="margin-top:6px;display:flex;gap:12px;align-items:center;">
+            <button type="button" onclick="toggleReplyForm(<?= (int)$thread['id'] ?>)"
+                    style="font-size:11px;color:var(--color-link);background:none;border:none;cursor:pointer;padding:0;">
+                &#9998; Reply
+            </button>
+            <form method="post" action="index.php?navigate=processpartmessage" style="display:inline;"
+                  onsubmit="return confirm('Delete this message and all its replies?');">
+                <input type="hidden" name="csrf_token" value="<?= $csrf ?>" />
+                <input type="hidden" name="action"     value="delete" />
+                <input type="hidden" name="id"         value="<?= (int)$thread['id'] ?>" />
+                <input type="hidden" name="part_id"    value="<?= $id ?>" />
+                <input type="submit" value="Delete"
+                       style="font-size:11px;color:#c04040;background:none;border:none;cursor:pointer;padding:0;" />
+            </form>
+        </div>
+        <?php endif; ?>
+    </div>
+
+    <!-- Replies -->
+    <?php foreach ($thread['replies'] as $reply):
+        $reply_name = htmlspecialchars($reply['sender_name'] ?: $reply['name'] ?: 'Seller');
+    ?>
+    <div style="padding:9px 14px 9px 28px;background:var(--color-nav-hover-bg);
+                border-top:1px solid var(--color-content-border);">
+        <div style="font-size:12px;color:#888;margin-bottom:4px;">
+            <strong><?= $reply_name ?></strong>
+            &mdash; <?= htmlspecialchars(substr($reply['created_at'], 0, 16)) ?>
+            <span style="color:#5588bb;font-size:10px;margin-left:4px;">&#8618; reply</span>
+        </div>
+        <div style="font-size:13px;line-height:1.6;"><?= nl2br(htmlspecialchars($reply['message'])) ?></div>
+        <?php if ($can_edit): ?>
+        <form method="post" action="index.php?navigate=processpartmessage" style="margin-top:4px;"
+              onsubmit="return confirm('Delete this reply?');">
+            <input type="hidden" name="csrf_token" value="<?= $csrf ?>" />
+            <input type="hidden" name="action"     value="delete" />
+            <input type="hidden" name="id"         value="<?= (int)$reply['id'] ?>" />
+            <input type="hidden" name="part_id"    value="<?= $id ?>" />
+            <input type="submit" value="Delete reply"
+                   style="font-size:11px;color:#c04040;background:none;border:none;cursor:pointer;padding:0;" />
+        </form>
+        <?php endif; ?>
+    </div>
+    <?php endforeach; ?>
+
+    <!-- Inline reply form (seller/admin only) -->
+    <?php if ($can_edit): ?>
+    <div id="reply-form-<?= (int)$thread['id'] ?>" style="display:none;padding:10px 14px;
+         border-top:1px solid var(--color-content-border);background:var(--color-content-bg,var(--color-surface));">
+        <form method="post" action="index.php?navigate=processmessagereply">
+            <input type="hidden" name="csrf_token" value="<?= $csrf ?>" />
+            <input type="hidden" name="parent_id"  value="<?= (int)$thread['id'] ?>" />
+            <input type="hidden" name="part_id"    value="<?= $id ?>" />
+            <textarea name="message" rows="3" required maxlength="2000"
+                      style="width:100%;padding:5px;font-size:13px;"
+                      placeholder="Type your reply…"></textarea><br>
+            <div style="margin-top:6px;display:flex;gap:8px;">
+                <input type="submit" value="Send reply" class="btn" style="padding:5px 14px;font-size:12px;" />
+                <button type="button" onclick="toggleReplyForm(<?= (int)$thread['id'] ?>)"
+                        style="padding:5px 10px;font-size:12px;background:none;border:1px solid var(--color-content-border);border-radius:3px;cursor:pointer;">
+                    Cancel
+                </button>
+            </div>
+        </form>
+    </div>
+    <?php endif; ?>
+</div>
+<?php endforeach; ?>
+<?php else: ?>
+<p style="color:#888;font-size:13px;">No messages yet.</p>
+<?php endif; ?>
+
+<?php if (!$is_seller): ?>
+<h4 style="margin-top:16px;">Send a message to the seller</h4>
+<?php if ($seller_inbox_full): ?>
+<p style="color:#c87020;font-size:13px;background:var(--color-nav-hover-bg);
+          padding:10px 14px;border-radius:4px;border:1px solid var(--color-content-border);">
+    &#9993; This seller's inbox is currently full. You cannot send a message at this time.
+    Please try again later or find their contact details on their profile.
+</p>
+<?php else: ?>
 <form method="post" action="index.php?navigate=processpartmessage">
     <input type="hidden" name="csrf_token" value="<?= $csrf ?>" />
     <input type="hidden" name="part_id"   value="<?= $id ?>" />
@@ -397,8 +513,19 @@ if ($msg_sent): ?>
               placeholder="Ask a question, make an offer…"></textarea><br><br>
     <input type="submit" value="Send message" class="btn" style="padding:7px 18px;" />
 </form>
-<?php endif; ?>
+<?php endif; // seller_inbox_full ?>
+<?php endif; // !is_seller ?>
 </div>
+
+<script>
+function toggleReplyForm(id) {
+    var el = document.getElementById('reply-form-' + id);
+    if (!el) return;
+    var shown = el.style.display !== 'none';
+    el.style.display = shown ? 'none' : '';
+    if (!shown) el.querySelector('textarea').focus();
+}
+</script>
 
 <?php if (!empty($related)): ?>
 <!-- Related parts -->

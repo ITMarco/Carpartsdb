@@ -8,6 +8,8 @@ include_once 'settings_helper.php';
 parts_ensure_table($CarpartsConnection);
 stats_day($CarpartsConnection, 'searches');
 
+$is_member = !empty($_SESSION['is_member']) || !empty($_SESSION['isadmin']);
+
 // ── Filters ───────────────────────────────────────────────────────────────────
 $filter_make   = isset($_GET['make'])   ? intval($_GET['make'])   : 0;
 $filter_model  = isset($_GET['model'])  ? intval($_GET['model'])  : 0;
@@ -15,24 +17,54 @@ $filter_year   = isset($_GET['year'])   ? intval($_GET['year'])   : 0;
 $filter_cond   = isset($_GET['cond'])   ? intval($_GET['cond'])   : -1;
 $filter_q      = isset($_GET['q'])      ? trim($_GET['q'])        : '';
 $filter_seller = isset($_GET['seller']) ? intval($_GET['seller']) : 0;
-$filter_sort   = isset($_GET['sort'])   ? $_GET['sort']           : 'newest';
-$page         = max(1, isset($_GET['pg']) ? intval($_GET['pg']) : 1);
-$per_page     = 20;
-$offset       = ($page - 1) * $per_page;
+$filter_sale   = isset($_GET['sale'])   ? intval($_GET['sale'])   : -1; // 1=for sale, 0=display only
+$page          = max(1, isset($_GET['pg']) ? intval($_GET['pg']) : 1);
+$per_page      = 24;
 
-$allowed_sorts = ['newest','oldest','price_asc','price_desc','cond_asc','cond_desc'];
-if (!in_array($filter_sort, $allowed_sorts, true)) $filter_sort = 'newest';
+// ── Sort ──────────────────────────────────────────────────────────────────────
+$sort_map = [
+    'date'  => 'p.`created_at`',
+    'title' => 'p.`title`',
+    'make'  => 'm.`name`',
+    'model' => 'COALESCE(mo.`name`, "")',
+    'year'  => 'p.`year_from`',
+    'cond'  => 'p.`condition`',
+    'stock' => 'p.`stock`',
+    'price' => 'p.`price`',
+];
+if ($is_member) $sort_map['private'] = 'p.`visible_private`';
 
-$order_by = match($filter_sort) {
-    'oldest'     => 'p.`created_at` ASC',
-    'price_asc'  => 'CASE WHEN p.`price` IS NULL THEN 1 ELSE 0 END, p.`price` ASC',
-    'price_desc' => 'p.`price` DESC',
-    'cond_asc'   => 'p.`condition` ASC',
-    'cond_desc'  => 'p.`condition` DESC',
-    default      => 'p.`created_at` DESC',
-};
+$sort_labels = [
+    'date'  => 'Date',
+    'title' => 'Title',
+    'make'  => 'Make',
+    'model' => 'Model',
+    'year'  => 'Year',
+    'cond'  => 'Condition',
+    'stock' => 'Qty',
+    'price' => 'Price',
+];
+if ($is_member) $sort_labels['private'] = 'Private';
 
-$is_member = !empty($_SESSION['is_member']) || !empty($_SESSION['isadmin']);
+// Default direction per field (what you get when clicking a fresh column)
+$sort_defaults = [
+    'date' => 'desc', 'title' => 'asc', 'make' => 'asc', 'model' => 'asc',
+    'year' => 'desc', 'cond'  => 'desc', 'stock' => 'desc', 'price' => 'asc',
+    'private' => 'desc',
+];
+
+$filter_sort = isset($_GET['sort']) && array_key_exists($_GET['sort'], $sort_map)
+    ? $_GET['sort'] : 'date';
+$filter_dir  = isset($_GET['dir']) && $_GET['dir'] === 'asc' ? 'asc' : 'desc';
+
+// Price ASC: put "on request" (NULL) at the end
+if ($filter_sort === 'price' && $filter_dir === 'asc') {
+    $order_by = 'CASE WHEN p.`price` IS NULL THEN 1 ELSE 0 END, p.`price` ASC';
+} else {
+    $order_by = $sort_map[$filter_sort] . ' ' . strtoupper($filter_dir);
+}
+
+$offset = ($page - 1) * $per_page;
 
 // ── Browse view preference ────────────────────────────────────────────────────
 $uid = isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : 0;
@@ -43,25 +75,29 @@ if ($uid > 0) {
     $browse_view = 'tile';
 }
 
-// ── Build query ───────────────────────────────────────────────────────────────
+// ── Build WHERE ───────────────────────────────────────────────────────────────
 $where  = ["p.`visible` = 1", "COALESCE(p.`is_sold`,0) = 0"];
 $params = [];
 $types  = '';
 
-if (!$is_member) $where[] = "p.`visible_private` = 0";
-if ($filter_make > 0)  { $where[] = "p.`make_id` = ?";  $params[] = $filter_make;  $types .= 'i'; }
+if (!$is_member)    $where[] = "p.`visible_private` = 0";
+if ($filter_make  > 0) { $where[] = "p.`make_id` = ?";  $params[] = $filter_make;  $types .= 'i'; }
 if ($filter_model > 0) { $where[] = "p.`model_id` = ?"; $params[] = $filter_model; $types .= 'i'; }
-if ($filter_year > 0) {
+if ($filter_year  > 0) {
     $where[] = "(p.`year_from` <= ? AND (p.`year_to` IS NULL OR p.`year_to` >= ?))";
     $params[] = $filter_year; $params[] = $filter_year; $types .= 'ii';
 }
-if ($filter_cond >= 0 && $filter_cond <= 5) { $where[] = "p.`condition` = ?"; $params[] = $filter_cond; $types .= 'i'; }
+if ($filter_cond >= 0 && $filter_cond <= 5) {
+    $where[] = "p.`condition` = ?"; $params[] = $filter_cond; $types .= 'i';
+}
 if ($filter_q !== '') {
     $like = '%' . $filter_q . '%';
-    $where[] = "(p.`title` LIKE ? OR p.`oem_number` LIKE ? OR p.`replacement_number` LIKE ?)";
-    $params[] = $like; $params[] = $like; $params[] = $like; $types .= 'sss';
+    $where[] = "(p.`title` LIKE ? OR p.`oem_number` LIKE ? OR p.`replacement_number` LIKE ? OR p.`description` LIKE ?)";
+    $params[] = $like; $params[] = $like; $params[] = $like; $params[] = $like; $types .= 'ssss';
 }
 if ($filter_seller > 0) { $where[] = "p.`seller_id` = ?"; $params[] = $filter_seller; $types .= 'i'; }
+if ($filter_sale === 1) { $where[] = "p.`for_sale` = 1"; }
+if ($filter_sale === 0) { $where[] = "p.`for_sale` = 0"; }
 
 $where_sql = implode(' AND ', $where);
 $base_sql  = "FROM `PARTS` p
@@ -80,6 +116,7 @@ if ($stmt) {
     $stmt->close();
 }
 $total_pages = max(1, (int)ceil($total_rows / $per_page));
+if ($page > $total_pages) $page = $total_pages;
 
 // Fetch page
 $parts = [];
@@ -96,7 +133,7 @@ if ($stmt) {
     $stmt->bind_param($types . 'ii', ...$all_params);
     $stmt->execute();
     $res = $stmt->get_result();
-    while ($row = $res->fetch_assoc()) $parts[] = $row;
+    if ($res) while ($row = $res->fetch_assoc()) $parts[] = $row;
     $stmt->close();
 }
 
@@ -111,7 +148,7 @@ $makes = [];
 if ($_mq) while ($r = $_mq->fetch_assoc()) $makes[(int)$r['id']] = $r['name'];
 $models_json = makes_all_models_json($CarpartsConnection);
 
-// Batch-fetch "also fits" makes for displayed parts
+// Batch-fetch "also fits" for displayed parts
 $compat_makes = [];
 if (!empty($parts)) {
     $pids = implode(',', array_map(fn($p) => (int)$p['id'], $parts));
@@ -125,19 +162,36 @@ if (!empty($parts)) {
 
 mysqli_close($CarpartsConnection);
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
 function browse_url(array $overrides = []): string {
-    global $filter_make, $filter_model, $filter_year, $filter_cond, $filter_q, $filter_seller, $filter_sort;
+    global $filter_make, $filter_model, $filter_year, $filter_cond, $filter_q,
+           $filter_seller, $filter_sort, $filter_dir, $filter_sale, $page;
     $current = array_filter([
         'navigate' => 'browse',
         'make'     => $filter_make   ?: null,
         'model'    => $filter_model  ?: null,
         'year'     => $filter_year   ?: null,
-        'cond'     => $filter_cond >= 0 ? $filter_cond : null,
+        'cond'     => $filter_cond  >= 0 ? $filter_cond : null,
         'q'        => $filter_q !== '' ? $filter_q : null,
         'seller'   => $filter_seller ?: null,
-        'sort'     => $filter_sort !== 'newest' ? $filter_sort : null,
+        'sale'     => $filter_sale  >= 0 ? $filter_sale : null,
+        'sort'     => $filter_sort !== 'date' ? $filter_sort : null,
+        'dir'      => ($filter_sort !== 'date' || $filter_dir !== 'desc') ? $filter_dir : null,
+        'pg'       => $page > 1 ? $page : null,
     ], fn($v) => $v !== null);
     return 'index.php?' . http_build_query(array_merge($current, $overrides));
+}
+
+function browse_paginate(int $current, int $total): array {
+    if ($total <= 1) return [];
+    $show = []; $prev = null;
+    for ($i = 1; $i <= $total; $i++) {
+        if ($i === 1 || $i === $total || abs($i - $current) <= 2) {
+            if ($prev !== null && $i - $prev > 1) $show[] = 0;
+            $show[] = $i; $prev = $i;
+        }
+    }
+    return $show;
 }
 ?>
 
@@ -149,13 +203,15 @@ function browse_url(array $overrides = []): string {
      background:var(--color-content-bg,var(--color-surface));
      padding-bottom:10px;margin-bottom:4px;
      border-bottom:1px solid var(--color-content-border);">
-<form method="get" action="index.php">
+<form method="get" action="index.php" id="browse-filter-form">
     <input type="hidden" name="navigate" value="browse" />
+    <input type="hidden" name="sort" value="<?= htmlspecialchars($filter_sort) ?>" />
+    <input type="hidden" name="dir"  value="<?= htmlspecialchars($filter_dir) ?>" />
     <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;">
         <div>
             <label style="font-size:12px;">Search</label><br>
             <input type="text" name="q" value="<?= htmlspecialchars($filter_q) ?>"
-                   placeholder="Title / OEM number&hellip;" style="width:150px;padding:5px;" />
+                   placeholder="Title / OEM / description…" style="width:160px;padding:5px;" />
         </div>
         <div>
             <label style="font-size:12px;">Make</label><br>
@@ -175,7 +231,7 @@ function browse_url(array $overrides = []): string {
         <div>
             <label style="font-size:12px;">Year</label><br>
             <input type="number" name="year" value="<?= $filter_year ?: '' ?>"
-                   min="1900" max="2099" placeholder="e.g. 1992" style="width:86px;padding:5px;" />
+                   min="1900" max="2099" placeholder="e.g. 1994" style="width:86px;padding:5px;" />
         </div>
         <div>
             <label style="font-size:12px;">Condition</label><br>
@@ -187,14 +243,11 @@ function browse_url(array $overrides = []): string {
             </select>
         </div>
         <div>
-            <label style="font-size:12px;">Sort</label><br>
-            <select name="sort" style="padding:5px;">
-                <option value="newest"     <?= $filter_sort==='newest'     ?'selected':'' ?>>Newest first</option>
-                <option value="oldest"     <?= $filter_sort==='oldest'     ?'selected':'' ?>>Oldest first</option>
-                <option value="price_asc"  <?= $filter_sort==='price_asc'  ?'selected':'' ?>>Price &uarr;</option>
-                <option value="price_desc" <?= $filter_sort==='price_desc' ?'selected':'' ?>>Price &darr;</option>
-                <option value="cond_asc"   <?= $filter_sort==='cond_asc'   ?'selected':'' ?>>Condition &uarr;</option>
-                <option value="cond_desc"  <?= $filter_sort==='cond_desc'  ?'selected':'' ?>>Condition &darr;</option>
+            <label style="font-size:12px;">Listing</label><br>
+            <select name="sale" style="padding:5px;">
+                <option value="-1" <?= ($filter_sale < 0)  ? 'selected' : '' ?>>All</option>
+                <option value="1"  <?= ($filter_sale === 1) ? 'selected' : '' ?>>For sale</option>
+                <option value="0"  <?= ($filter_sale === 0) ? 'selected' : '' ?>>Display only</option>
             </select>
         </div>
         <div>
@@ -203,6 +256,26 @@ function browse_url(array $overrides = []): string {
         </div>
     </div>
 </form>
+
+<!-- Sort bar -->
+<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px;align-items:center;font-size:12px;">
+    <span style="color:#888;margin-right:4px;">Sort:</span>
+    <?php foreach ($sort_labels as $key => $label):
+        $active   = ($filter_sort === $key);
+        $new_dir  = $active
+            ? ($filter_dir === 'asc' ? 'desc' : 'asc')
+            : ($sort_defaults[$key] ?? 'asc');
+        $arrow    = $active ? ($filter_dir === 'asc' ? ' &#9650;' : ' &#9660;') : '';
+        $url      = htmlspecialchars(browse_url(['sort' => $key, 'dir' => $new_dir, 'pg' => 1]));
+    ?>
+    <a href="<?= $url ?>"
+       style="padding:3px 8px;border:1px solid var(--color-content-border);border-radius:3px;
+              text-decoration:none;white-space:nowrap;
+              <?= $active ? 'font-weight:bold;background:var(--color-nav-hover-bg);' : '' ?>">
+        <?= htmlspecialchars($label) ?><?= $arrow ?>
+    </a>
+    <?php endforeach; ?>
+</div>
 </div>
 
 <script>
@@ -232,7 +305,10 @@ updateModels();
 <?php endif; ?>
 
 <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin:10px 0 8px;">
-    <p style="font-size:12px;color:#666;margin:0;"><?= number_format($total_rows) ?> part(s) found.</p>
+    <p style="font-size:12px;color:#666;margin:0;">
+        <?= number_format($total_rows) ?> part<?= $total_rows !== 1 ? 's' : '' ?> found
+        <?php if ($total_pages > 1): ?> &mdash; page <?= $page ?> of <?= $total_pages ?><?php endif; ?>
+    </p>
     <div style="display:flex;gap:4px;">
         <button id="btn-list" onclick="setView('list')"
                 style="padding:4px 10px;font-size:12px;border-radius:3px;cursor:pointer;border:1px solid var(--color-content-border);">
@@ -258,7 +334,7 @@ updateModels();
     <td style="padding:5px 8px;">Make / Model</td>
     <td style="padding:5px 8px;">Year</td>
     <td style="padding:5px 8px;">Cond.</td>
-    <td style="padding:5px 8px;">Stock</td>
+    <td style="padding:5px 8px;">Qty</td>
     <td style="padding:5px 8px;text-align:right;">Price</td>
 </tr>
 <?php foreach ($parts as $p):
@@ -337,12 +413,28 @@ updateModels();
 </div>
 </div>
 
-<?php if ($total_pages > 1): ?>
-<div style="margin-top:12px;display:flex;gap:5px;flex-wrap:wrap;">
-    <?php for ($i = 1; $i <= $total_pages; $i++): ?>
-    <a href="<?= htmlspecialchars(browse_url(['pg' => $i])) ?>"
-       style="padding:4px 10px;border:1px solid var(--color-content-border);border-radius:3px;font-size:12px;<?= ($i === $page) ? 'font-weight:bold;' : '' ?>"><?= $i ?></a>
-    <?php endfor; ?>
+<!-- ── Pagination ──────────────────────────────────────────────────────────── -->
+<?php $pager = browse_paginate($page, $total_pages); ?>
+<?php if (!empty($pager)): ?>
+<div style="margin-top:14px;display:flex;gap:4px;flex-wrap:wrap;align-items:center;">
+    <?php if ($page > 1): ?>
+    <a href="<?= htmlspecialchars(browse_url(['pg' => $page - 1])) ?>"
+       style="padding:5px 10px;border:1px solid var(--color-content-border);border-radius:3px;font-size:12px;">&#8592; Prev</a>
+    <?php endif; ?>
+    <?php foreach ($pager as $pg): ?>
+        <?php if ($pg === 0): ?>
+        <span style="padding:5px 4px;font-size:12px;color:#888;">&hellip;</span>
+        <?php elseif ($pg === $page): ?>
+        <span style="padding:5px 10px;border:1px solid var(--color-accent);border-radius:3px;font-size:12px;font-weight:bold;background:var(--color-nav-hover-bg);"><?= $pg ?></span>
+        <?php else: ?>
+        <a href="<?= htmlspecialchars(browse_url(['pg' => $pg])) ?>"
+           style="padding:5px 10px;border:1px solid var(--color-content-border);border-radius:3px;font-size:12px;"><?= $pg ?></a>
+        <?php endif; ?>
+    <?php endforeach; ?>
+    <?php if ($page < $total_pages): ?>
+    <a href="<?= htmlspecialchars(browse_url(['pg' => $page + 1])) ?>"
+       style="padding:5px 10px;border:1px solid var(--color-content-border);border-radius:3px;font-size:12px;">Next &#8594;</a>
+    <?php endif; ?>
 </div>
 <?php endif; ?>
 <?php endif; ?>
